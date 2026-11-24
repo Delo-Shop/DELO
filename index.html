@@ -1,0 +1,5252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DELO - Учет продаж</title>
+        <!-- PWA: манифест -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- PWA: цвет темы (шапка на Android) -->
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- PWA: iOS (iPhone/iPad) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Delo">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23667eea'/><text x='50' y='68' font-size='52' font-family='Arial,sans-serif' font-weight='bold' fill='white' text-anchor='middle'>D</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .logo-text {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 4px;
+        }
+
+        .header-divider {
+            color: #e2e8f0;
+            font-size: 30px;
+            font-weight: 300;
+        }
+
+        .header-title {
+            color: #2d3748;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-restock, .btn-repair, .btn-stats, .btn-order {
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-restock { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
+        .btn-repair { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .btn-stats { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
+        .btn-order { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); }
+
+        .btn-restock:hover, .btn-repair:hover, .btn-stats:hover, .btn-order:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-restock .badge, .btn-repair .badge, .btn-order .badge {
+            background: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .btn-restock .badge { color: #ed8936; }
+        .btn-repair .badge { color: #667eea; }
+        .btn-order .badge { color: #4299e1; }
+
+        .repair-section, .order-section, .restock-section, .monthly-stats-section {
+            background: #f0f4ff;
+            border: 2px solid #667eea;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .order-section { background: #f0f8ff; border-color: #4299e1; }
+        .restock-section { background: #fff5f0; border-color: #ed8936; }
+        .monthly-stats-section { background: #f0fdf4; border-color: #48bb78; }
+
+        .repair-header, .order-header, .restock-header, .monthly-stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .repair-header h3, .order-header h3, .restock-header h3, .monthly-stats-header h3 {
+            color: #667eea;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .order-header h3 { color: #4299e1; }
+        .restock-header h3 { color: #dd6b20; }
+        .monthly-stats-header h3 { color: #38a169; }
+
+        .repair-search, .order-search, .restock-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .repair-search input, .order-search input, .restock-controls input {
+            padding: 8px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            min-width: 200px;
+        }
+
+        .repair-search input:focus, .order-search input:focus, .restock-controls input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .order-search input:focus { border-color: #4299e1; }
+        .restock-controls input:focus { border-color: #ed8936; }
+
+        .repair-grid, .order-grid, .restock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .restock-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+
+        .repair-card, .order-card, .restock-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .repair-card.completed, .order-card.completed {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+
+        .repair-card:hover, .order-card:hover, .restock-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+        .order-card:hover { border-color: #4299e1; box-shadow: 0 4px 15px rgba(66, 153, 225, 0.2); }
+        .restock-item:hover { border-color: #ed8936; box-shadow: 0 4px 15px rgba(237, 137, 54, 0.2); }
+
+        .repair-card .repair-info, .order-card .order-info { margin-bottom: 10px; }
+
+        .repair-card .repair-info div, .order-card .order-info div {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .repair-card .repair-actions, .order-card .order-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .repair-checkbox, .order-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .repair-checkbox input[type="checkbox"], .order-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        .order-checkbox input[type="checkbox"] { accent-color: #4299e1; }
+
+        /* Поле «Диапазон дат» */
+.date-range-wrapper {
+    position: relative;
+}
+.date-range-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #4a5568;
+    white-space: nowrap;
+}
+.date-range-btn:hover {
+    border-color: #667eea;
+}
+.date-range-btn.active {
+    border-color: #4299e1;
+    background: #ebf8ff;
+    color: #2c5282;
+}
+.date-range-btn .cal-icon {
+    font-size: 16px;
+}
+
+/* Календарь */
+.calendar-popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    padding: 14px;
+    z-index: 1000;
+    width: 280px;
+}
+.calendar-popup::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgb(248, 248, 248);
+    z-index: -1;
+}
+.calendar-popup.active {
+    display: block;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.cal-month {
+    font-weight: 700;
+    color: #2d3748;
+    font-size: 15px;
+}
+.cal-nav {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #4a5568;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cal-nav:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 6px;
+}
+.cal-weekdays span {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #a0aec0;
+    padding: 4px 0;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.15s;
+    color: #2d3748;
+    position: relative;
+}
+.cal-day:hover:not(.other-month):not(.selected-start):not(.selected-end) {
+    background: #ebf8ff;
+}
+.cal-day.other-month {
+    color: #cbd5e0;
+    cursor: default;
+}
+.cal-day.today {
+    font-weight: 700;
+    color: #4299e1;
+}
+.cal-day.selected-start,
+.cal-day.selected-end {
+    background: #4299e1;
+    color: white;
+    font-weight: 700;
+}
+.cal-day.in-range {
+    background: #bee3f8;
+    border-radius: 0;
+}
+.cal-day.range-start {
+    border-radius: 50% 0 0 50%;
+}
+.cal-day.range-end {
+    border-radius: 0 50% 50% 0;
+}
+
+.cal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+.cal-actions button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.cal-reset {
+    background: #fc8181;
+    color: white;
+}
+.cal-reset:hover {
+    background: #f56565;
+}
+.cal-close {
+    background: #e2e8f094;
+    color: #4a5568;
+}
+.cal-close:hover {
+    background: #cbd5e0;
+}
+
+        .restock-item .item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .restock-item .item-left input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #ed8936;
+        }
+
+        .restock-item .item-left .item-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .restock-item .item-left .item-name.purchased {
+            text-decoration: line-through;
+            color: #a0aec0;
+        }
+
+        .restock-item .item-actions {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .restock-item .item-actions .restock-date {
+            font-size: 11px;
+            color: #a0aec0;
+        }
+
+        .restock-empty {
+            text-align: center;
+            padding: 20px;
+            color: #a0aec0;
+            font-size: 14px;
+        }
+
+        .monthly-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .month-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .month-card:hover {
+            border-color: #48bb78;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .month-card .month-name {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .month-card .month-total {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .month-card .month-diff {
+            font-size: 14px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .month-card .month-diff.up { color: #48bb78; }
+        .month-card .month-diff.down { color: #fc8181; }
+
+        .month-detail {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 2px solid #48bb78;
+            display: none;
+        }
+
+        .month-detail.active { display: block; }
+
+        .month-detail .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .month-detail .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-card {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .detail-card .label {
+            font-size: 13px;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .detail-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .category-stats { margin-top: 20px; }
+
+        .category-stats table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .category-stats th {
+            background: #48bb78;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .category-stats td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .category-stats tr:hover { background: #f0fdf4; }
+
+        .top-products-in-stats {
+            margin-top: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .top-products-in-stats h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .top-product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+
+        .top-product-item:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .top-product-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .top-product-stats {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .top-product-count { color: #718096; font-size: 13px; }
+        .top-product-total { font-weight: 700; color: #667eea; }
+
+        .brand-stats { margin-top: 20px; }
+
+        .brand-stats h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .brand-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .brand-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .brand-card .brand-name {
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .brand-card .brand-count { font-size: 13px; color: #718096; }
+        .brand-card .brand-total { font-weight: 700; color: #667eea; margin-top: 3px; }
+
+        .btn-close-section {
+            background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 10px rgba(245, 101, 101, 0.3);
+        }
+
+        .btn-close-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 101, 101, 0.4);
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .btn-add-item {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 10px rgba(72, 187, 120, 0.3);
+        }
+
+        .btn-add-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+        }
+
+        .btn-copy-item {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 10px rgba(66, 153, 225, 0.3);
+        }
+
+        .btn-copy-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(66, 153, 225, 0.4);
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+        }
+
+        .btn-export-item {
+            background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 10px rgba(159, 122, 234, 0.3);
+        }
+
+        .btn-export-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(159, 122, 234, 0.4);
+            background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+        }
+
+        .btn-delete-item {
+            background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-delete-item:hover {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            transform: scale(1.05);
+        }
+
+        .add-section {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border: 2px solid #667eea;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+            position: relative;
+        }
+
+        .add-section::before {
+            content: '➕ Новая продажа';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: white;
+            padding: 0 15px;
+            font-weight: 700;
+            color: #667eea;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+
+        .add-form {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr 0.7fr;
+            gap: 15px;
+            align-items: end;
+            margin-top: 5px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: white;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group.autocomplete-wrapper { position: relative; }
+
+        .autocomplete-list {
+            position: absolute;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 50;
+            width: 100%;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            top: 100%;
+            margin-top: 5px;
+        }
+
+        .autocomplete-list.active { display: block; }
+
+.autocomplete-list .item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.autocomplete-list .item span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.autocomplete-list .item .remove-suggestion {
+    background: transparent;
+    border: none;
+    color: #a0aec0;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.autocomplete-list .item .remove-suggestion:hover {
+    background: #fc8181;
+    color: white;
+}
+
+        .autocomplete-list .item:hover { background: #ebf4ff; }
+        .autocomplete-list .item.highlighted { background: #ebf4ff; }
+        .autocomplete-list .item.similar {
+            background: #fef3c7;
+            border-left: 3px solid #ed8936;
+        }
+
+        .form-group.checkbox-group {
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            padding-top: 5px;
+        }
+
+        .form-group.checkbox-group label {
+            margin-bottom: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .form-group.checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            height: 44px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .date-selector {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            background: #f7fafc;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .date-selector label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        .date-selector input[type="date"] {
+            padding: 8px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            background: white;
+        }
+
+        .date-selector .quick-date-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .date-selector .quick-date-btn {
+            padding: 6px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #4a5568;
+        }
+
+        .date-selector .quick-date-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .btn-today {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .date-selector .day-total-info {
+            margin-left: auto;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .date-selector .day-total-info span {
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .day-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #f7fafc;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #667eea;
+        }
+
+        .stat-card .label {
+            font-size: 13px;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-top: 4px;
+        }
+
+        .stat-card.total-day {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+
+        .stat-card.total-day .label,
+        .stat-card.total-day .value {
+            color: white !important;
+        }
+
+        .stat-card.cash .value { color: #48bb78; }
+        .stat-card.card .value { color: #4299e1; }
+        .stat-card.transfer .value { color: #ed8936; }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 25px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tbody tr:hover { background: #f7fafc; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-cash { background: #48bb78; color: white; }
+        .badge-card { background: #4299e1; color: white; }
+        .badge-transfer { background: #ed8936; color: white; }
+
+        .btn-delete {
+            background: #fc8181;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+            margin-right: 5px;
+        }
+
+        .btn-edit {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+.action-buttons {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 5px;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+.action-buttons .btn-edit,
+.action-buttons .btn-delete {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+        .today-label {
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .today-label span { color: #667eea; }
+
+        .btn-copy-sales {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3);
+            margin-left: auto;
+        }
+
+        .btn-copy-sales:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(72, 187, 120, 0.4);
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+        }
+
+        .month-total {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .month-total .month-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .month-total .label {
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .month-total .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: white !important;
+        }
+
+        .month-total .month-item.total {
+            border-right: 1px solid rgba(255,255,255,0.3);
+            padding-right: 20px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-action {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .btn-export { background: #48bb78; color: white; }
+        .btn-export:hover { background: #38a169; }
+
+        .btn-clear { background: #fc8181; color: white; }
+        .btn-clear:hover { background: #f56565; }
+
+        .btn-import { background: #4299e1; color: white; position: relative; overflow: hidden; }
+        .btn-import:hover { background: #3182ce; }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #a0aec0;
+            cursor: pointer;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+        }
+
+        .modal-close:hover { color: #4a5568; }
+
+        .modal-content h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .modal-content .form-group { margin-bottom: 15px; }
+
+        .modal-content .form-group label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 5px;
+            display: block;
+            font-size: 13px;
+        }
+
+        .modal-content .form-group input,
+        .modal-content .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .modal-content .form-group input:focus,
+        .modal-content .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .btn-modal-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-modal-cancel {
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal-cancel:hover { background: #cbd5e0; }
+
+        .setup-modal-content { max-width: 550px; }
+
+        .setup-modal-content h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .setup-hint {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #2c5282;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .setup-hint a {
+            color: #3182ce;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .setup-hint a:hover { text-decoration: underline; }
+
+        .test-result {
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .test-result.success {
+            display: block;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .test-result.error {
+            display: block;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .test-result.info {
+            display: block;
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .import-preview {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .import-preview table { font-size: 12px; }
+        .import-preview th { background: #e2e8f0; color: #2d3748; padding: 6px 10px; font-size: 11px; }
+        .import-preview td { padding: 4px 10px; font-size: 12px; }
+
+        .import-options {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .import-options label {
+            display: block;
+            margin: 8px 0;
+            cursor: pointer;
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        .import-options label input[type="radio"] {
+            margin-right: 10px;
+            accent-color: #667eea;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #2d3748;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            font-weight: 600;
+            z-index: 2000;
+            animation: slideUp 0.3s ease;
+            max-width: 400px;
+            font-size: 14px;
+        }
+
+        .toast.success { background: #48bb78; }
+        .toast.error { background: #fc8181; }
+        .toast.info { background: #4299e1; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .time-column {
+            font-weight: 500;
+            color: #718096;
+            font-size: 13px;
+        }
+
+        .phone-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .phone-group input { flex: 1; }
+
+        .btn-add-phone {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(72, 187, 120, 0.3);
+        }
+
+        .btn-add-phone:hover {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            transform: scale(1.1);
+        }
+
+        .search-filter {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-filter input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-filter input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-filter select {
+            padding: 10px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            min-width: 150px;
+        }
+
+        .search-filter select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-categories {
+            background: #edf2f7;
+            color: #4a5568;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .btn-categories:hover {
+            background: #e2e8f0;
+            transform: translateY(-2px);
+        }
+
+        .category-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 15px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .category-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            transition: background 0.2s;
+        }
+
+        .category-row:last-child {
+            border-bottom: none;
+        }
+
+        .category-row:hover {
+            background: #f7fafc;
+        }
+
+        .category-row .cat-name {
+            flex: 1;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .category-row .cat-count {
+            font-size: 12px;
+            color: #718096;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+
+        .category-row .cat-edit-input {
+            flex: 1;
+            padding: 6px 10px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .category-row .btn-cat-action {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .category-row .btn-cat-edit {
+            background: #4299e1;
+            color: white;
+        }
+
+        .category-row .btn-cat-edit:hover {
+            background: #3182ce;
+        }
+
+        .category-row .btn-cat-save {
+            background: #48bb78;
+            color: white;
+        }
+
+        .category-row .btn-cat-save:hover {
+            background: #38a169;
+        }
+
+        .category-row .btn-cat-cancel {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .category-row .btn-cat-cancel:hover {
+            background: #cbd5e0;
+        }
+
+        .category-row .btn-cat-delete {
+            background: #fc8181;
+            color: white;
+        }
+
+        .category-row .btn-cat-delete:hover {
+            background: #f56565;
+        }
+
+        .category-row .btn-cat-delete:disabled {
+            background: #e2e8f0;
+            color: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .add-category-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .add-category-row input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .add-category-row input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .add-category-row button {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .add-category-row button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .category-hint {
+            font-size: 11px;
+            color: #48bb78;
+            margin-top: 4px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .category-hint.active {
+            display: block;
+        }
+
+        .category-hint.changed {
+            color: #ed8936;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Кнопка настроек в углу */
+.settings-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #f7fafc;
+    border: 2px solid #e2e8f0;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.settings-btn:hover {
+    transform: rotate(90deg);
+    border-color: #667eea;
+}
+
+/* Обрезка длинного названия */
+.logo-text {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Модалка настроек — список пунктов */
+.settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+.settings-list button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #f7fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #2d3748;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+.settings-list button:hover {
+    background: #ebf4ff;
+    border-color: #667eea;
+    transform: translateX(3px);
+}
+
+/* Приветственная модалка */
+.welcome-text {
+    color: #4a5568;
+    font-size: 14px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+/* Кнопка поиска в строке дат */
+.search-toggle-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.search-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+.search-toggle-btn.active {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+}
+
+/* Панель поиска */
+.search-panel {
+    display: none;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #f7fafc;
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: 2px solid #667eea;
+    margin-bottom: 15px;
+    animation: slideDown 0.3s ease;
+}
+.search-panel.active {
+    display: flex;
+}
+.search-panel input[type="text"],
+.search-panel input[type="date"],
+.search-panel select {
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    transition: all 0.3s;
+}
+.search-panel input[type="text"] {
+    flex: 1;
+    min-width: 180px;
+}
+.search-panel input[type="text"]:focus,
+.search-panel input[type="date"]:focus,
+.search-panel select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Календарь диапазона */
+.date-range-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 4px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+.date-range-wrapper.picking {
+    border-color: #ed8936;
+    box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.15);
+}
+.date-range-wrapper.has-range {
+    border-color: #48bb78;
+    background: #f0fff4;
+}
+.date-range-wrapper input[type="date"] {
+    border: none;
+    padding: 4px;
+    background: transparent;
+}
+.date-range-wrapper input[type="date"]:focus {
+    box-shadow: none;
+}
+.date-range-hint {
+    font-size: 12px;
+    color: #718096;
+    white-space: nowrap;
+    font-weight: 600;
+}
+.date-range-wrapper.picking .date-range-hint {
+    color: #dd6b20;
+}
+.date-range-wrapper.has-range .date-range-hint {
+    color: #38a169;
+}
+
+/* Яркая кнопка сброса */
+.btn-reset-filters {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 10px rgba(245, 101, 101, 0.3);
+    white-space: nowrap;
+}
+.btn-reset-filters:hover {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(245, 101, 101, 0.4);
+}
+.btn-reset-filters:active {
+    transform: translateY(0);
+}
+
+.date-range-wrapper.has-range input[type="date"] {
+    display: none;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+        @media (max-width: 1200px) {
+            .add-form { grid-template-columns: 1fr 1fr 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 5px; }
+            .header-actions { margin-left: 0; width: 100%; flex-direction: column; }
+            .header-actions .btn-restock,
+            .header-actions .btn-repair,
+            .header-actions .btn-stats,
+            .header-actions .btn-order {
+                width: 100%;
+                justify-content: center;
+            }
+            .logo-text { font-size: 28px; }
+            .header-title { font-size: 20px; }
+            .header-divider { display: none; }
+            .add-form { grid-template-columns: 1fr 1fr; }
+            .day-stats { grid-template-columns: 1fr 1fr; }
+            .month-total { grid-template-columns: 1fr 1fr; }
+            .month-total .month-item.total { border-right: none; padding-right: 0; }
+            .date-selector { flex-direction: column; align-items: stretch; }
+            .date-selector .day-total-info { margin-left: 0; text-align: center; }
+            .date-selector .quick-date-buttons { justify-content: center; }
+            .restock-grid { grid-template-columns: 1fr; }
+            .restock-controls { flex-direction: column; width: 100%; }
+            .restock-controls input { width: 100%; min-width: unset; }
+            .restock-controls .btn-add-item,
+            .restock-controls .btn-copy-item,
+            .restock-controls .btn-export-item {
+                width: 100%;
+                justify-content: center;
+            }
+            .repair-grid, .order-grid { grid-template-columns: 1fr; }
+            .monthly-stats-grid { grid-template-columns: 1fr; }
+            .brand-stats-grid { grid-template-columns: 1fr 1fr; }
+            .btn-close-section { padding: 8px 16px; font-size: 13px; }
+        }
+
+        @media (max-width: 480px) {
+            .add-form { grid-template-columns: 1fr; }
+            .day-stats { grid-template-columns: 1fr; }
+            .month-total { grid-template-columns: 1fr; }
+            .brand-stats-grid { grid-template-columns: 1fr; }
+            .stat-card .value { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+        <!-- Кнопка настроек -->
+<button class="settings-btn" onclick="showSettingsMenu()" title="Настройки">⚙️</button>
+            <span class="logo-text" id="shopNameDisplay"></span>
+            <span class="header-divider">|</span>
+            <span class="header-title">Учет продаж</span>
+            <div class="header-actions">
+                <button class="btn-stats" onclick="toggleMonthlyStats()">📊 Статистика</button>
+                <button class="btn-order" onclick="toggleOrderSection()">📋 Заказ <span class="badge" id="orderCount">0</span></button>
+                <button class="btn-repair" onclick="toggleRepairSection()">🔧 Ремонт <span class="badge" id="repairCount">0</span></button>
+                <button class="btn-restock" onclick="toggleRestockSection()">📦 Закупка <span class="badge" id="restockCount">0</span></button>
+            </div>
+        </div>
+
+        <div class="add-section">
+            <form class="add-form" id="addForm">
+                <div class="form-group">
+                    <label>Дата продажи</label>
+                    <input type="date" id="saleDate">
+                </div>
+                <div class="form-group autocomplete-wrapper">
+                    <label>Название товара</label>
+                    <input type="text" id="productName" placeholder="Чехол iPhone 15" required autocomplete="off">
+                    <div class="autocomplete-list" id="autocompleteList"></div>
+                </div>
+                <div class="form-group">
+                    <label>Категория</label>
+                    <select id="category"></select>
+                    <div class="category-hint" id="categoryHint"></div>
+                </div>
+                <div class="form-group">
+                    <label>Стоимость (₽)</label>
+                    <input type="number" id="price" placeholder="0" min="0" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Способ оплаты</label>
+                    <select id="paymentMethod">
+                        <option value="Наличные">💰 Наличные</option>
+                        <option value="Безналичные">💳 Безналичные</option>
+                        <option value="Перевод">📱 Перевод</option>
+                    </select>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="lastItem">
+                        📦 Последний
+                    </label>
+                </div>
+                <button type="submit" class="btn-add">➕ Добавить</button>
+            </form>
+        </div>
+
+
+        <div class="order-section" id="orderSection" style="display:none;">
+            <div class="order-header">
+                <h3>📋 Журнал заказов</h3>
+                <div class="order-search">
+                    <input type="text" id="orderSearch" placeholder="Поиск..." oninput="filterOrders()">
+                    <button class="btn-add-item" onclick="openOrderModal()">➕ Добавить заказ</button>
+                    <button class="btn-close-section" onclick="toggleOrderSection()">✕ Закрыть</button>
+                </div>
+            </div>
+            <div class="order-grid" id="orderGrid">
+                <div class="restock-empty">✨ Нет активных заказов</div>
+            </div>
+        </div>
+
+        <div class="repair-section" id="repairSection" style="display:none;">
+            <div class="repair-header">
+                <h3>🔧 Журнал ремонтов</h3>
+                <div class="repair-search">
+                    <input type="text" id="repairSearch" placeholder="Поиск..." oninput="filterRepairs()">
+                    <button class="btn-add-item" onclick="openRepairModal()">➕ Добавить ремонт</button>
+                    <button class="btn-close-section" onclick="toggleRepairSection()">✕ Закрыть</button>
+                </div>
+            </div>
+            <div class="repair-grid" id="repairGrid">
+                <div class="restock-empty">✨ Нет активных ремонтов</div>
+            </div>
+        </div>
+
+        <div class="restock-section" id="restockSection" style="display:none;">
+            <div class="restock-header">
+                <h3>📦 Товары для закупки</h3>
+                <div class="restock-controls">
+                    <input type="text" id="restockInput" placeholder="Название товара" maxlength="50">
+                    <button class="btn-add-item" onclick="addRestockItem()">➕ Добавить</button>
+                    <button class="btn-copy-item" onclick="copyRestockList()">📋 Копировать</button>
+                    <button class="btn-export-item" onclick="exportRestockToFile()">💾 Скачать TXT</button>
+                    <button class="btn-close-section" onclick="toggleRestockSection()">✕ Закрыть</button>
+                </div>
+            </div>
+            <div class="restock-grid" id="restockGrid">
+                <div class="restock-empty">✨ Все товары в наличии</div>
+            </div>
+        </div>
+
+        <div class="monthly-stats-section" id="monthlyStatsSection" style="display:none;">
+            <div class="monthly-stats-header">
+                <h3>📊 Статистика по месяцам</h3>
+                <button class="btn-close-section" onclick="closeMonthlyStats()">✕ Закрыть</button>
+            </div>
+            <div class="monthly-stats-grid" id="monthlyStatsGrid"></div>
+            
+            <div class="month-detail" id="monthDetail">
+                <div class="detail-header">
+                    <h4 id="monthDetailTitle">Детальная статистика</h4>
+                    <button class="btn-close-section" onclick="closeMonthDetail()">✕ Закрыть</button>
+                </div>
+                <div class="detail-grid" id="monthDetailGrid"></div>
+                
+                <div class="top-products-in-stats" id="topProductsInStats">
+                    <h4>🏆 ТОП-10 товаров за выбранный месяц (от 2 продаж)</h4>
+                    <div id="topProductsList">
+                        <div class="empty-state">Нет данных для отображения</div>
+                    </div>
+                </div>
+                
+                <div class="brand-stats" id="brandStatsSection">
+                    <h4>📦 Статистика по брендам</h4>
+                    <div class="brand-stats-grid" id="brandStatsGrid"></div>
+                </div>
+                
+                <div class="category-stats" id="categoryStats"></div>
+            </div>
+        </div>
+
+        <div class="today-label">📊 <span id="selectedDateLabel">Сегодня</span></div>
+        <div class="day-stats" id="dayStats">
+            <div class="stat-card total-day">
+                <div class="label">📊 Выручка за день</div>
+                <div class="value" id="dayTotal">0 ₽</div>
+            </div>
+            <div class="stat-card cash">
+                <div class="label">💰 Наличные</div>
+                <div class="value" id="dayCash">0 ₽</div>
+            </div>
+            <div class="stat-card card">
+                <div class="label">💳 Безналичные</div>
+                <div class="value" id="dayCard">0 ₽</div>
+            </div>
+            <div class="stat-card transfer">
+                <div class="label">📱 Перевод</div>
+                <div class="value" id="dayTransfer">0 ₽</div>
+            </div>
+        </div>
+
+<div class="date-selector">
+    <label>📅 Показать продажи за:</label>
+    <input type="date" id="viewDate">
+    <button class="btn-today" onclick="setTodayView()">📆 Сегодня</button>
+    <div class="quick-date-buttons">
+        <button type="button" class="quick-date-btn" onclick="setDateYesterday()">Вчера</button>
+        <button type="button" class="quick-date-btn" onclick="setDateDaysAgo(3)">3 дня</button>
+        <button type="button" class="quick-date-btn" onclick="setDateDaysAgo(7)">Неделя</button>
+    </div>
+    <button type="button" class="search-toggle-btn" onclick="toggleSearchPanel()" id="searchToggleBtn" title="Поиск и фильтры">🔍</button>
+    <div class="day-total-info">Итого: <span id="viewDayTotal">0 ₽</span></div>
+</div>
+
+<!-- Панель поиска (скрыта по умолчанию) -->
+<div class="search-panel" id="searchPanel">
+    <input type="text" id="searchInput" placeholder="🔍 Поиск по названию...">
+    <select id="categoryFilter">
+        <option value="">Все категории</option>
+    </select>
+<div class="date-range-wrapper" id="dateRangeWrapper">
+    <button type="button" class="date-range-btn" id="dateRangeBtn" onclick="toggleCalendar()">
+        <span class="cal-icon">📅</span>
+        <span id="dateRangeText">Диапазон дат</span>
+    </button>
+</div>
+    <button type="button" class="btn-reset-filters" onclick="clearAllFilters()" title="Сбросить все фильтры">✕ Сбросить</button>
+</div>
+
+
+        <div class="today-label">
+            📋 <span id="salesListLabel">Продажи за сегодня</span>
+            <button class="btn-copy-sales" onclick="copySalesForGoogle()">📋 Копировать</button>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Время</th>
+                        <th>Товар</th>
+                        <th>Категория</th>
+                        <th>Стоимость</th>
+                        <th>Оплата</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody id="salesTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="month-total" id="monthTotal">
+            <div class="month-item total">
+                <span class="label">📆 Итого за месяц</span>
+                <span class="value" id="monthTotalValue">0 ₽</span>
+            </div>
+            <div class="month-item">
+                <span class="label">💰 Наличные</span>
+                <span class="value" id="monthCash">0 ₽</span>
+            </div>
+            <div class="month-item">
+                <span class="label">💳 Безналичные</span>
+                <span class="value" id="monthCard">0 ₽</span>
+            </div>
+            <div class="month-item">
+                <span class="label">📱 Перевод</span>
+                <span class="value" id="monthTransfer">0 ₽</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-action btn-export" onclick="exportCSV()">📊 Экспорт CSV</button>
+            <button class="btn-action btn-export" onclick="exportToExcel()">📊 Экспорт Excel</button>
+            <div class="file-input-wrapper">
+                <button class="btn-action btn-import">📤 Импорт CSV</button>
+                <input type="file" accept=".csv" onchange="importCSV(event)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка редактирования категорий -->
+    <div class="modal" id="categoriesModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <button class="modal-close" onclick="closeCategoriesModal()">&times;</button>
+            <h2>📂 Редактирование категорий</h2>
+            <p style="color: #718096; font-size: 13px; margin-bottom: 15px;">
+                Здесь можно переименовать или удалить категории. При удалении товары переносятся в другую категорию.
+            </p>
+            
+            <div class="category-list" id="categoriesList"></div>
+            
+            <div class="add-category-row">
+                <input type="text" id="newCategoryNameModal" placeholder="Новая категория" maxlength="30">
+                <button onclick="addCategoryFromModal()">➕ Добавить</button>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeCategoriesModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка редактирования продажи -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            <h2>✏️ Редактировать продажу</h2>
+            <form id="editForm">
+                    <div class="form-group">
+        <label>Дата продажи</label>
+        <input type="date" id="editSaleDate" required>
+    </div>
+                <div class="form-group">
+                    <label>Название товара</label>
+                    <input type="text" id="editProductName" required>
+                </div>
+                <div class="form-group">
+                    <label>Категория</label>
+                    <select id="editCategory"></select>
+                </div>
+                <div class="form-group">
+                    <label>Стоимость (₽)</label>
+                    <input type="number" id="editPrice" min="0" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Способ оплаты</label>
+                    <select id="editPaymentMethod">
+                        <option value="Наличные">💰 Наличные</option>
+                        <option value="Безналичные">💳 Безналичные</option>
+                        <option value="Перевод">📱 Перевод</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="closeEditModal()">Отмена</button>
+                    <button type="submit" class="btn-modal-save">💾 Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка ремонта -->
+    <div class="modal" id="repairModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeRepairModal()">&times;</button>
+            <h2>🔧 Добавить ремонт</h2>
+            <form id="repairForm">
+                <div class="form-group">
+                    <label>Наименование устройства</label>
+                    <input type="text" id="repairDevice" required>
+                </div>
+                <div class="form-group">
+                    <label>Что делаем</label>
+                    <input type="text" id="repairWork" required>
+                </div>
+                <div class="form-group">
+                    <label>Имя клиента</label>
+                    <input type="text" id="repairName" required>
+                </div>
+                <div class="form-group">
+                    <label>Номер телефона</label>
+                    <div class="phone-group">
+                        <input type="tel" id="repairPhone" required>
+                        <button type="button" class="btn-add-phone" onclick="addRepairPhone()">+</button>
+                    </div>
+                </div>
+                <div class="form-group" id="repairSecondPhoneGroup" style="display:none;">
+                    <label>Дополнительный номер</label>
+                    <input type="tel" id="repairSecondPhone">
+                </div>
+                <div class="form-group">
+                    <label>Предоплата (₽)</label>
+                    <input type="number" id="repairPrepayment" min="0" step="1" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Доплата (₽)</label>
+                    <input type="number" id="repairAdditional" min="0" step="1" value="0">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="closeRepairModal()">Отмена</button>
+                    <button type="submit" class="btn-modal-save">💾 Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка заказа -->
+    <div class="modal" id="orderModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeOrderModal()">&times;</button>
+            <h2>📋 Добавить заказ</h2>
+            <form id="orderForm">
+                <div class="form-group">
+                    <label>Наименование устройства</label>
+                    <input type="text" id="orderDevice" required>
+                </div>
+                <div class="form-group">
+                    <label>Заказ</label>
+                    <input type="text" id="orderWork" required>
+                </div>
+                <div class="form-group">
+                    <label>Имя клиента</label>
+                    <input type="text" id="orderName" required>
+                </div>
+                <div class="form-group">
+                    <label>Номер телефона</label>
+                    <div class="phone-group">
+                        <input type="tel" id="orderPhone" required>
+                        <button type="button" class="btn-add-phone" onclick="addOrderPhone()">+</button>
+                    </div>
+                </div>
+                <div class="form-group" id="orderSecondPhoneGroup" style="display:none;">
+                    <label>Дополнительный номер</label>
+                    <input type="tel" id="orderSecondPhone">
+                </div>
+                <div class="form-group">
+                    <label>Предоплата (₽)</label>
+                    <input type="number" id="orderPrepayment" min="0" step="1" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Доплата (₽)</label>
+                    <input type="number" id="orderAdditional" min="0" step="1" value="0">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="closeOrderModal()">Отмена</button>
+                    <button type="submit" class="btn-modal-save">💾 Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка добавления категории (старая, из формы) -->
+    <div class="modal" id="addCategoryModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeAddCategoryModal()">&times;</button>
+            <h2>➕ Добавить категорию</h2>
+            <div class="form-group">
+                <label>Название категории</label>
+                <input type="text" id="newCategoryName" maxlength="30" placeholder="Например: Чехлы">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" onclick="closeAddCategoryModal()">Отмена</button>
+                <button class="btn-modal-save" onclick="confirmAddCategory()">💾 Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка импорта -->
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            <h2>📤 Импорт CSV</h2>
+            <p style="color: #718096; margin-bottom: 15px; font-size: 14px;">
+                📋 Формат CSV: <strong>Дата;Время;Товар;Категория;Стоимость;Оплата</strong><br>
+                ⏰ Время можно не указывать — подставится автоматически<br>
+                📅 Поддерживаются форматы даты: <strong>ГГГГ-ММ-ДД</strong> или <strong>ДД/ММ/ГГГГ</strong><br>
+                📌 <strong>Важно:</strong> Файл должен быть в кодировке UTF-8<br>
+                💡 Пример: <em>2026-08-07;14:30;Чехол iPhone 15;Чехлы;1500;Наличные</em>
+            </p>
+            <div class="import-options">
+                <label>
+                    <input type="radio" name="importMode" value="add" checked>
+                    ➕ Добавить к существующим
+                </label>
+                <label>
+                    <input type="radio" name="importMode" value="replace">
+                    🔄 Заменить все данные
+                </label>
+            </div>
+            <div id="importPreview"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeImportModal()">Отмена</button>
+                <button type="button" class="btn-modal-save" id="confirmImportBtn" onclick="confirmImport()" style="display:none;">✅ Подтвердить импорт</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка настроек (меню) -->
+<div class="modal" id="settingsMenuModal">
+    <div class="modal-content" style="max-width: 400px;">
+        <button class="modal-close" onclick="closeSettingsMenu()">&times;</button>
+        <h2>⚙️ Настройки</h2>
+<div class="settings-list">
+    <button onclick="openShopNameFromSettings()">🏪 Название магазина</button>
+    <button onclick="openSyncFromSettings()">🔄 Синхронизация</button>
+    <button onclick="openCategoriesFromSettings()">📂 Редактирование категорий</button>
+    <button onclick="openBackupFromSettings()">💾 Сохранить всё (файл)</button>
+    <button onclick="openRestoreFromSettings()">📂 Загрузить всё (файл)</button>
+    <button onclick="toggleAutoSave()" id="autoSaveBtn">📁 Автосохранение в папку</button>
+    <div id="autoSaveStatus" style="font-size: 12px; color: #718096; padding: 8px 18px; display: none;"></div>
+</div>
+    </div>
+</div>
+
+<!-- Модалка названия магазина -->
+<div class="modal" id="shopNameModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeShopNameModal()">&times;</button>
+        <h2>🏪 Название магазина</h2>
+        <p style="color:#718096;font-size:13px;margin-bottom:15px;">
+            Это название будет отображаться в шапке приложения.
+        </p>
+        <div class="form-group">
+            <label>Название</label>
+            <input type="text" id="shopNameInput" maxlength="30" placeholder="Например: Мой магазин">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" onclick="closeShopNameModal()">Отмена</button>
+            <button class="btn-modal-save" onclick="saveShopName()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Приветственная модалка (первый запуск) -->
+<div class="modal" id="welcomeModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeWelcomeModal()">&times;</button>
+        <h2>👋 Добро пожаловать!</h2>
+        <p class="welcome-text">Введите название магазина, чтобы продолжить.</p>
+        <div class="form-group">
+            <label>Название магазина</label>
+            <input type="text" id="welcomeShopNameInput" maxlength="30" placeholder="Например: Мой магазин">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" onclick="skipWelcomeModal()">Пропустить</button>
+            <button class="btn-modal-save" onclick="saveWelcomeShopName()">💾 Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Календарь выбора диапазона -->
+<div class="calendar-popup" id="calendarPopup">
+    <div class="calendar-header">
+        <button type="button" class="cal-nav" onclick="changeMonth(-1)">‹</button>
+        <span class="cal-month" id="calMonthLabel">Ноябрь 2026</span>
+        <button type="button" class="cal-nav" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-weekdays">
+        <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-actions">
+        <button type="button" class="cal-reset" onclick="resetCalendar()">Сбросить</button>
+        <button type="button" class="cal-close" onclick="closeCalendar()">Закрыть</button>
+    </div>
+</div>
+
+    <script>
+// (блок синхронизации с GitHub удалён — приложение работает локально)
+
+        // ============================================================
+        // === ОСНОВНЫЕ ПЕРЕМЕННЫЕ ===
+        // ============================================================
+        let sales = [];
+        let categories = ['Чехлы', 'Стекло', 'Зарядка', 'Наушники', 'Аксессуары'];
+        let restockItems = [];
+        let repairs = [];
+        let orders = [];
+        let deletedIds = {};
+        let productNamesHistory = [];
+        let hiddenProductNames = []; // Названия, скрытые из автодополнения
+        // Календарь
+let calCurrentDate = new Date();
+let calPickStart = null; // дата начала (YYYY-MM-DD)
+let calPickEnd = null;   // дата конца (YYYY-MM-DD)
+        // ============================================================
+// === АВТОСОХРАНЕНИЕ В ПАПКУ (File System Access API) ===
+// ============================================================
+let autoSaveDirHandle = null;
+const AUTOSAVE_DB = 'connect_autosave_db';
+const AUTOSAVE_FILE = 'data.json';
+
+function isFileSystemSupported() {
+    return 'showDirectoryPicker' in window;
+}
+
+async function openAutoSaveDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(AUTOSAVE_DB, 1);
+        request.onupgradeneeded = () => {
+            request.result.createObjectStore('handles');
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// ============================================================
+// === КАЛЕНДАРЬ ВЫБОРА ДИАПАЗОНА ===
+// ============================================================
+function toggleCalendar() {
+    const popup = document.getElementById('calendarPopup');
+    const btn = document.getElementById('dateRangeBtn');
+    const isOpen = popup.classList.contains('active');
+    
+    if (isOpen) {
+        closeCalendar();
+    } else {
+        popup.classList.add('active');
+        btn.classList.add('active');
+        renderCalendar();
+    }
+}
+
+function closeCalendar() {
+    document.getElementById('calendarPopup').classList.remove('active');
+    document.getElementById('dateRangeBtn').classList.remove('active');
+}
+
+function changeMonth(delta) {
+    calCurrentDate.setMonth(calCurrentDate.getMonth() + delta);
+    renderCalendar();
+}
+
+function renderCalendar() {
+    const year = calCurrentDate.getFullYear();
+    const month = calCurrentDate.getMonth();
+    
+    const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    document.getElementById('calMonthLabel').textContent = `${monthNames[month]} ${year}`;
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    // День недели первого дня (Пн=0, Вс=6)
+    let startWeekday = firstDay.getDay() - 1;
+    if (startWeekday < 0) startWeekday = 6;
+    
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    
+    let html = '';
+    
+    // Пустые ячейки до первого дня
+    for (let i = 0; i < startWeekday; i++) {
+        html += `<div class="cal-day other-month"></div>`;
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        
+        let classes = 'cal-day';
+        if (dateStr === todayStr) classes += ' today';
+        
+        // Начало
+        if (calPickStart && dateStr === calPickStart) {
+            classes += ' selected-start';
+            if (calPickEnd) classes += ' range-start';
+        }
+        // Конец
+        if (calPickEnd && dateStr === calPickEnd) {
+            classes += ' selected-end';
+            if (calPickStart) classes += ' range-end';
+        }
+        // В диапазоне
+        if (calPickStart && calPickEnd && dateStr > calPickStart && dateStr < calPickEnd) {
+            classes += ' in-range';
+        }
+        
+        html += `<div class="${classes}" onclick="selectCalendarDay('${dateStr}')">${day}</div>`;
+    }
+    
+    document.getElementById('calGrid').innerHTML = html;
+}
+
+function selectCalendarDay(dateStr) {
+    if (!calPickStart) {
+        // Первый клик — начало
+        calPickStart = dateStr;
+        calPickEnd = null;
+        renderCalendar();
+    } else if (!calPickEnd) {
+        // Второй клик — конец
+        if (dateStr === calPickStart) {
+            // Кликнули по той же дате — сбрасываем
+            calPickStart = null;
+            renderCalendar();
+            return;
+        }
+        if (dateStr < calPickStart) {
+            // Если раньше начала — меняем местами
+            calPickEnd = calPickStart;
+            calPickStart = dateStr;
+        } else {
+            calPickEnd = dateStr;
+        }
+        renderCalendar();
+        
+        // Применяем и закрываем
+        applyCalendarRange();
+        setTimeout(closeCalendar, 300);
+    }
+}
+
+function applyCalendarRange() {
+    dateFromTerm = calPickStart || '';
+    dateToTerm = calPickEnd || '';
+    
+    // Если только начало — до сегодня
+    if (dateFromTerm && !dateToTerm) {
+        const today = new Date();
+        dateToTerm = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    }
+    
+    updateDateRangeButton();
+    renderTable();
+}
+
+function updateDateRangeButton() {
+    const textEl = document.getElementById('dateRangeText');
+    if (!textEl) return;
+    
+    if (dateFromTerm && dateToTerm) {
+        textEl.textContent = `${formatDateShort(dateFromTerm)} — ${formatDateShort(dateToTerm)}`;
+    } else if (dateFromTerm) {
+        textEl.textContent = `с ${formatDateShort(dateFromTerm)}`;
+    } else {
+        textEl.textContent = 'Диапазон дат';
+    }
+}
+
+function resetCalendar() {
+    calPickStart = null;
+    calPickEnd = null;
+    dateFromTerm = '';
+    dateToTerm = '';
+    renderCalendar();
+    updateDateRangeButton();
+    renderTable();
+    showToast('📅 Диапазон сброшен', 'info');
+}
+
+// Закрытие календаря при клике вне его
+document.addEventListener('click', function(e) {
+    const popup = document.getElementById('calendarPopup');
+    const btn = document.getElementById('dateRangeBtn');
+    if (popup && popup.classList.contains('active')) {
+        if (!popup.contains(e.target) && !btn.contains(e.target)) {
+            closeCalendar();
+        }
+    }
+}, true);
+
+async function saveDirHandle(handle) {
+    try {
+        const db = await openAutoSaveDB();
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').put(handle, 'dirHandle');
+        await new Promise((res, rej) => {
+            tx.oncomplete = res;
+            tx.onerror = () => rej(tx.error);
+        });
+    } catch (e) {
+        console.log('Не удалось сохранить handle:', e);
+    }
+}
+
+async function loadDirHandle() {
+    try {
+        const db = await openAutoSaveDB();
+        const tx = db.transaction('handles', 'readonly');
+        const store = tx.objectStore('handles');
+        const request = store.get('dirHandle');
+        return await new Promise((res, rej) => {
+            request.onsuccess = () => res(request.result);
+            request.onerror = () => rej(request.error);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
+async function verifyPermission(handle) {
+    const options = { mode: 'readwrite' };
+    if ((await handle.queryPermission(options)) === 'granted') {
+        return true;
+    }
+    if ((await handle.requestPermission(options)) === 'granted') {
+        return true;
+    }
+    return false;
+}
+
+async function toggleAutoSave() {
+    if (!isFileSystemSupported()) {
+        showToast('❌ Автосохранение не поддерживается в этом браузере. Используйте ручное сохранение.', 'error');
+        return;
+    }
+    
+    if (autoSaveDirHandle) {
+        // Отключаем
+        autoSaveDirHandle = null;
+        localStorage.removeItem('autoSaveEnabled');
+        await saveDirHandle(null);
+        updateAutoSaveButton();
+        showToast('🔌 Автосохранение отключено', 'info');
+        return;
+    }
+    
+    // Включаем
+    try {
+        const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        const hasPermission = await verifyPermission(dirHandle);
+        if (!hasPermission) {
+            showToast('❌ Нет разрешения на запись в папку', 'error');
+            return;
+        }
+        autoSaveDirHandle = dirHandle;
+        await saveDirHandle(dirHandle);
+        localStorage.setItem('autoSaveEnabled', 'true');
+        updateAutoSaveButton();
+        
+        // Сразу сохраняем текущие данные
+        await autoSaveToFile();
+        
+        showToast(`✅ Автосохранение включено: ${dirHandle.name}`);
+    } catch (e) {
+        if (e.name === 'AbortError') {
+            console.log('Пользователь отменил выбор папки');
+        } else {
+            showToast('❌ Ошибка: ' + e.message, 'error');
+        }
+    }
+}
+
+async function autoSaveToFile() {
+    if (!autoSaveDirHandle) return;
+    
+    try {
+        const hasPermission = await verifyPermission(autoSaveDirHandle);
+        if (!hasPermission) {
+            console.warn('Нет разрешения на запись');
+            return;
+        }
+        
+        const data = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            shopName: shopName,
+            sales: sales,
+            categories: categories,
+            restockItems: restockItems,
+            repairs: repairs,
+            orders: orders,
+            productNamesHistory: productNamesHistory,
+            hiddenProductNames: hiddenProductNames,
+            deletedIds: deletedIds
+        };
+        
+        const fileHandle = await autoSaveDirHandle.getFileHandle(AUTOSAVE_FILE, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(data, null, 2));
+        await writable.close();
+        
+        console.log('💾 Автосохранено в файл:', AUTOSAVE_FILE);
+        updateAutoSaveStatus('✅ Сохранено ' + new Date().toLocaleTimeString('ru-RU'));
+    } catch (e) {
+        console.error('Ошибка автосохранения:', e);
+        updateAutoSaveStatus('❌ Ошибка сохранения');
+    }
+}
+
+async function loadFromAutoSaveFile() {
+    if (!autoSaveDirHandle) return false;
+    
+    try {
+        const hasPermission = await verifyPermission(autoSaveDirHandle);
+        if (!hasPermission) return false;
+        
+        const fileHandle = await autoSaveDirHandle.getFileHandle(AUTOSAVE_FILE);
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        const data = JSON.parse(text);
+        
+        // Проверка формата
+        if (!data.sales && !data.repairs && !data.orders) {
+            console.log('Файл автосохранения пустой или неверного формата');
+            return false;
+        }
+        
+        // Загружаем
+        if (data.shopName) {
+            shopName = data.shopName;
+            localStorage.setItem('shopName', shopName);
+            updateShopNameDisplay();
+        }
+        if (data.sales) sales = data.sales;
+        if (data.categories) categories = data.categories;
+        if (data.restockItems) restockItems = data.restockItems;
+        if (data.repairs) repairs = data.repairs;
+        if (data.orders) orders = data.orders;
+        if (data.productNamesHistory) productNamesHistory = data.productNamesHistory;
+        if (data.hiddenProductNames) hiddenProductNames = data.hiddenProductNames;
+        if (data.deletedIds) deletedIds = data.deletedIds;
+        
+        updateProductNamesHistory();
+        saveDataLocal();
+        updateCategorySelect();
+        updateEditCategorySelect();
+        updateCategoryFilter();
+        render();
+        
+        console.log('📂 Данные загружены из автосохранения');
+        return true;
+    } catch (e) {
+        // Файла нет — это нормально при первом запуске
+        if (e.name === 'NotFoundError') {
+            console.log('Файла автосохранения ещё нет');
+            return false;
+        }
+        console.error('Ошибка загрузки из автосохранения:', e);
+        return false;
+    }
+}
+
+function updateAutoSaveButton() {
+    const btn = document.getElementById('autoSaveBtn');
+    const status = document.getElementById('autoSaveStatus');
+    if (!btn) return;
+    
+    if (!isFileSystemSupported()) {
+        btn.textContent = '📁 Автосохранение (не поддерживается)';
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        return;
+    }
+    
+    if (autoSaveDirHandle) {
+        btn.textContent = `📁 Автосохранение включено (${autoSaveDirHandle.name})`;
+        btn.style.background = '#f0fff4';
+        btn.style.borderColor = '#48bb78';
+        btn.style.color = '#22543d';
+        if (status) {
+            status.style.display = 'block';
+            status.textContent = 'Нажмите ещё раз, чтобы отключить';
+        }
+    } else {
+        btn.textContent = '📁 Автосохранение в папку';
+        btn.style.background = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        if (status) status.style.display = 'none';
+    }
+}
+
+function updateAutoSaveStatus(text) {
+    const status = document.getElementById('autoSaveStatus');
+    if (status && autoSaveDirHandle) {
+        status.style.display = 'block';
+        status.textContent = text;
+    }
+}
+
+        let editingSaleId = null;
+        let currentViewDate = '';
+        let importedData = [];
+        let categorySelectContext = 'category';
+        let searchTerm = '';
+        let categoryFilterTerm = '';
+        let dateFromTerm = '';
+        let dateToTerm = '';
+        let pickingStart = true;
+        
+        // ============================================================
+// === НАЗВАНИЕ МАГАЗИНА + НАСТРОЙКИ ===
+// ============================================================
+const DEFAULT_SHOP_NAME = 'МАГАЗИН';
+let shopName = DEFAULT_SHOP_NAME;
+
+function loadShopName() {
+    const saved = localStorage.getItem('shopName');
+    if (saved) {
+        shopName = saved;
+    } else {
+        shopName = DEFAULT_SHOP_NAME;
+    }
+    updateShopNameDisplay();
+}
+
+function updateShopNameDisplay() {
+    const display = document.getElementById('shopNameDisplay');
+    if (!display) return;
+    display.textContent = shopName;
+    display.title = shopName;
+}
+
+function showSettingsMenu() {
+    document.getElementById('settingsMenuModal').classList.add('active');
+}
+
+function closeSettingsMenu() {
+    document.getElementById('settingsMenuModal').classList.remove('active');
+}
+
+function openShopNameFromSettings() {
+    closeSettingsMenu();
+    document.getElementById('shopNameInput').value = shopName === DEFAULT_SHOP_NAME ? '' : shopName;
+    document.getElementById('shopNameModal').classList.add('active');
+    setTimeout(() => document.getElementById('shopNameInput').focus(), 100);
+}
+
+function openSyncFromSettings() {
+    closeSettingsMenu();
+    showToast('🔄 Синхронизация в разработке', 'info');
+}
+
+function openCategoriesFromSettings() {
+    closeSettingsMenu();
+    showCategoriesModal();
+}
+
+function openBackupFromSettings() {
+    closeSettingsMenu();
+    exportAllData();
+}
+
+function openRestoreFromSettings() {
+    closeSettingsMenu();
+    document.getElementById('backupFileInput').click();
+}
+
+function closeShopNameModal() {
+    document.getElementById('shopNameModal').classList.remove('active');
+}
+
+function saveShopName() {
+    const input = document.getElementById('shopNameInput');
+    const newName = input.value.trim();
+    if (!newName) {
+        showToast('❌ Введите название', 'error');
+        return;
+    }
+    shopName = newName;
+    localStorage.setItem('shopName', shopName);
+    updateShopNameDisplay();
+    closeShopNameModal();
+    showToast('✅ Название магазина сохранено');
+}
+
+// Приветственная модалка
+function showWelcomeModal() {
+    document.getElementById('welcomeModal').classList.add('active');
+    setTimeout(() => document.getElementById('welcomeShopNameInput').focus(), 100);
+}
+
+function closeWelcomeModal() {
+    const input = document.getElementById('welcomeShopNameInput');
+    const hasName = input.value.trim().length > 0;
+    
+    if (!hasName) {
+        if (!confirm('Название магазина можно изменить позже в настройках (⚙️ в правом верхнем углу). Закрыть без сохранения?')) {
+            return;
+        }
+    }
+    
+    document.getElementById('welcomeModal').classList.remove('active');
+    localStorage.setItem('shopNameAsked', 'true');
+}
+
+function skipWelcomeModal() {
+    document.getElementById('welcomeModal').classList.remove('active');
+    localStorage.setItem('shopNameAsked', 'true');
+}
+
+function saveWelcomeShopName() {
+    const input = document.getElementById('welcomeShopNameInput');
+    const newName = input.value.trim();
+    if (!newName) {
+        showToast('❌ Введите название или нажмите «Пропустить»', 'error');
+        return;
+    }
+    shopName = newName;
+    localStorage.setItem('shopName', shopName);
+    localStorage.setItem('shopNameAsked', 'true');
+    updateShopNameDisplay();
+    document.getElementById('welcomeModal').classList.remove('active');
+    showToast(`✅ Добро пожаловать, ${shopName}!`);
+}
+
+function toggleSearchPanel() {
+    const panel = document.getElementById('searchPanel');
+    const btn = document.getElementById('searchToggleBtn');
+    panel.classList.toggle('active');
+    btn.classList.toggle('active');
+}
+
+document.getElementById('shopNameInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') saveShopName();
+});
+document.getElementById('welcomeShopNameInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') saveWelcomeShopName();
+});
+
+        const brands = ['awei', 'hoco', 'isa', 'borofone', 'mivo', 'celebrat'];
+
+        // ============================================================
+        // === ФУНКЦИИ НОРМАЛИЗАЦИИ ===
+        // ============================================================
+        function normalizeProductName(name) {
+            if (!name) return '';
+            
+            let normalized = name.toLowerCase().trim();
+            normalized = normalized.replace(/\s+/g, ' ');
+            
+            const synonyms = {
+                'айфон': 'iphone',
+                'чехол': 'чехол',
+                'кейс': 'чехол',
+                'накладка': 'чехол',
+                'кабель': 'кабель',
+                'провод': 'кабель',
+                'сзу': 'сзу',
+                'блок': 'сзу',
+                'блочок': 'сзу',
+                'зарядка': 'сзу',
+                'автодержатель': 'автодержатель',
+                'автомобильный держатель': 'автодержатель',
+                'держатель в машину': 'автодержатель'
+            };
+            
+            Object.entries(synonyms).forEach(([key, value]) => {
+                if (key.includes(' ')) {
+                    normalized = normalized.replace(new RegExp(key, 'g'), value);
+                }
+            });
+            
+            let words = normalized.split(' ');
+            words = words.map(word => synonyms[word] || word);
+            
+            const stopWords = ['для', 'на', 'и', 'с', 'без', 'из', 'от', 'до', 'в', 'во'];
+            words = words.filter(word => !stopWords.includes(word));
+            words.sort();
+            
+            return words.join(' ');
+        }
+
+        function findSimilarProducts(inputName) {
+            const normalizedInput = normalizeProductName(inputName);
+            const similar = [];
+            
+            productNamesHistory.forEach(existingName => {
+                const normalizedExisting = normalizeProductName(existingName);
+                if (normalizedInput === normalizedExisting && existingName !== inputName) {
+                    similar.push(existingName);
+                }
+            });
+            
+            return similar;
+        }
+
+        // ============================================================
+        // === УТИЛИТЫ ===
+        // ============================================================
+        function getCurrentDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            return { date: `${year}-${month}-${day}`, time: `${hours}:${minutes}` };
+        }
+
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+            return `${parseInt(parts[2])} ${months[parseInt(parts[1]) - 1]} ${parts[0]}`;
+        }
+
+        function formatPrice(value) {
+            return value.toLocaleString('ru-RU') + ' ₽';
+        }
+
+        function getPaymentBadge(method) {
+            const map = { 'Наличные': 'badge-cash', 'Безналичные': 'badge-card', 'Перевод': 'badge-transfer' };
+            return map[method] || 'badge-cash';
+        }
+
+        function getPaymentEmoji(method) {
+            const map = { 'Наличные': '💰', 'Безналичные': '💳', 'Перевод': '📱' };
+            return map[method] || '';
+        }
+
+        function getPaymentShort(method) {
+            const map = { 'Наличные': 'Нал', 'Безналичные': 'Б/Н', 'Перевод': 'Перевод' };
+            return map[method] || method;
+        }
+
+        function fixEncoding(str) {
+            if (!str) return str;
+            try { return decodeURIComponent(escape(str)); } catch (e) { return str; }
+        }
+
+        function generateId() {
+            return Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function showToast(message, type = 'success') {
+            const oldToasts = document.querySelectorAll('.toast');
+            oldToasts.forEach(t => t.remove());
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // ============================================================
+        // === РЕДАКТИРОВАНИЕ КАТЕГОРИЙ ===
+        // ============================================================
+        function showCategoriesModal() {
+            document.getElementById('categoriesModal').classList.add('active');
+            renderCategoriesModal();
+        }
+
+        function closeCategoriesModal() {
+            document.getElementById('categoriesModal').classList.remove('active');
+        }
+
+        function renderCategoriesModal() {
+            const list = document.getElementById('categoriesList');
+            if (categories.length === 0) {
+                list.innerHTML = '<div style="text-align:center;padding:20px;color:#a0aec0;">Нет категорий</div>';
+                return;
+            }
+            
+            list.innerHTML = categories.map((cat, index) => {
+                const count = sales.filter(s => s.category === cat).length;
+                return `
+                    <div class="category-row" data-category="${cat}" data-index="${index}">
+                        <span class="cat-name">${cat}</span>
+                        <span class="cat-count">${count} продаж</span>
+                        <button class="btn-cat-action btn-cat-edit" onclick="startEditCategory(${index})" title="Переименовать">✏️</button>
+                        <button class="btn-cat-action btn-cat-delete" 
+                                onclick="deleteCategoryFromModal(${index})" 
+                                title="Удалить"
+                                ${categories.length <= 1 ? 'disabled' : ''}>🗑️</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function startEditCategory(index) {
+            const row = document.querySelector(`.category-row[data-index="${index}"]`);
+            if (!row) return;
+            
+            const catName = categories[index];
+            const count = sales.filter(s => s.category === catName).length;
+            
+            row.innerHTML = `
+                <input type="text" class="cat-edit-input" value="${catName}" maxlength="30" 
+                       onkeydown="if(event.key==='Enter'){saveCategoryEditModal(${index})} else if(event.key==='Escape'){renderCategoriesModal()}">
+                <span class="cat-count">${count} продаж</span>
+                <button class="btn-cat-action btn-cat-save" onclick="saveCategoryEditModal(${index})" title="Сохранить">💾</button>
+                <button class="btn-cat-action btn-cat-cancel" onclick="renderCategoriesModal()" title="Отмена">✕</button>
+            `;
+            
+            const input = row.querySelector('.cat-edit-input');
+            input.focus();
+            input.select();
+        }
+
+        function saveCategoryEditModal(index) {
+            const row = document.querySelector(`.category-row[data-index="${index}"]`);
+            if (!row) return;
+            
+            const input = row.querySelector('.cat-edit-input');
+            const newName = input.value.trim();
+            const oldName = categories[index];
+            
+            if (!newName) {
+                showToast('❌ Введите название категории', 'error');
+                return;
+            }
+            
+            if (newName === oldName) {
+                renderCategoriesModal();
+                return;
+            }
+            
+            if (categories.includes(newName)) {
+                showToast('❌ Такая категория уже существует', 'error');
+                return;
+            }
+            
+            let updated = 0;
+            sales.forEach(s => {
+                if (s.category === oldName) {
+                    s.category = newName;
+                    s.updatedAt = new Date().toISOString();
+                    updated++;
+                }
+            });
+            
+            categories[index] = newName;
+            
+            saveData();
+            updateCategorySelect();
+            updateEditCategorySelect();
+            updateCategoryFilter();
+            renderCategoriesModal();
+            render();
+            
+            showToast(`✅ Категория переименована. Обновлено товаров: ${updated}`);
+        }
+
+        function clearHiddenProductNames() {
+    if (!confirm('Вернуть все скрытые названия в подсказки?')) return;
+    hiddenProductNames = [];
+    updateProductNamesHistory();
+    saveDataLocal();
+    showToast('✅ Все названия возвращены в подсказки');
+}
+
+        function deleteCategoryFromModal(index) {
+            const catName = categories[index];
+            const count = sales.filter(s => s.category === catName).length;
+            
+            if (categories.length <= 1) {
+                showToast('❌ Нельзя удалить последнюю категорию', 'error');
+                return;
+            }
+            
+            if (count > 0) {
+                const otherCategories = categories.filter((_, i) => i !== index);
+                const targetIndex = prompt(
+                    `В категории "${catName}" ${count} продаж.\n\n` +
+                    `Введите номер категории, в которую перенести товары:\n\n` +
+                    otherCategories.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+                    '1'
+                );
+                
+                if (targetIndex === null) return;
+                
+                const targetIdx = parseInt(targetIndex) - 1;
+                if (isNaN(targetIdx) || targetIdx < 0 || targetIdx >= otherCategories.length) {
+                    showToast('❌ Неверный номер категории', 'error');
+                    return;
+                }
+                
+                const targetCategory = otherCategories[targetIdx];
+                
+                sales.forEach(s => {
+                    if (s.category === catName) {
+                        s.category = targetCategory;
+                        s.updatedAt = new Date().toISOString();
+                    }
+                });
+                
+                categories.splice(index, 1);
+                
+                saveData();
+                updateCategorySelect();
+                updateEditCategorySelect();
+                updateCategoryFilter();
+                renderCategoriesModal();
+                render();
+                
+                showToast(`✅ Категория удалена. Товары перенесены в "${targetCategory}"`);
+            } else {
+                if (!confirm(`Удалить категорию "${catName}"?`)) return;
+                
+                categories.splice(index, 1);
+                saveData();
+                updateCategorySelect();
+                updateEditCategorySelect();
+                updateCategoryFilter();
+                renderCategoriesModal();
+                
+                showToast(`🗑️ Категория "${catName}" удалена`);
+            }
+        }
+
+        function addCategoryFromModal() {
+            const input = document.getElementById('newCategoryNameModal');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showToast('❌ Введите название категории', 'error');
+                return;
+            }
+            
+            if (categories.includes(name)) {
+                showToast('❌ Такая категория уже существует', 'error');
+                return;
+            }
+            
+            categories.push(name);
+            input.value = '';
+            
+            saveData();
+            updateCategorySelect();
+            updateEditCategorySelect();
+            updateCategoryFilter();
+            renderCategoriesModal();
+            
+            showToast(`✅ Категория "${name}" добавлена`);
+        }
+
+        document.getElementById('newCategoryNameModal').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addCategoryFromModal();
+            }
+        });
+
+        // ============================================================
+        // === АВТОПОДСТАНОВКА КАТЕГОРИИ ===
+        // ============================================================
+        function findCategoryFromHistory(productName) {
+            if (!productName || productName.trim().length < 2) return null;
+            
+            const normalizedInput = normalizeProductName(productName);
+            
+            const exactMatch = sales.find(s => 
+                normalizeProductName(s.name) === normalizedInput
+            );
+            if (exactMatch) return exactMatch.category;
+            
+            const inputWords = normalizedInput.split(' ').filter(w => w.length > 2);
+            
+            if (inputWords.length === 0) return null;
+            
+            let bestMatch = null;
+            let bestScore = 0;
+            
+            const productMap = new Map();
+            sales.forEach(s => {
+                const norm = normalizeProductName(s.name);
+                if (!productMap.has(norm)) {
+                    productMap.set(norm, { name: s.name, category: s.category, count: 0 });
+                }
+                productMap.get(norm).count++;
+            });
+            
+            productMap.forEach((info, normName) => {
+                const productWords = normName.split(' ').filter(w => w.length > 2);
+                
+                let matches = 0;
+                inputWords.forEach(w => {
+                    if (productWords.includes(w)) matches++;
+                });
+                
+                const score = matches / Math.max(inputWords.length, productWords.length);
+                
+                if (score >= 0.5 && score > bestScore) {
+                    bestScore = score;
+                    bestMatch = info;
+                }
+            });
+            
+            if (bestMatch && bestScore >= 0.5) {
+                return bestMatch.category;
+            }
+            
+            return null;
+        }
+
+        let autoCategoryApplied = false;
+
+        function autoSuggestCategory() {
+            const nameInput = document.getElementById('productName');
+            const categorySelect = document.getElementById('category');
+            const hint = document.getElementById('categoryHint');
+            
+            const name = nameInput.value.trim();
+            
+            if (name.length < 2) {
+                hint.classList.remove('active');
+                return;
+            }
+            
+            const suggestedCategory = findCategoryFromHistory(name);
+            
+            if (suggestedCategory && categories.includes(suggestedCategory)) {
+                if (categorySelect.value === suggestedCategory) {
+                    hint.classList.remove('active');
+                    return;
+                }
+                
+                if (autoCategoryApplied || categorySelect.value === categories[0] || !categorySelect.value) {
+                    categorySelect.value = suggestedCategory;
+                    autoCategoryApplied = true;
+                    
+                    hint.textContent = `💡 Категория определена по истории: ${suggestedCategory}`;
+                    hint.classList.add('active');
+                    hint.classList.remove('changed');
+                }
+            } else {
+                hint.classList.remove('active');
+            }
+        }
+
+        document.getElementById('category').addEventListener('change', function() {
+            const hint = document.getElementById('categoryHint');
+            
+            if (autoCategoryApplied) {
+                hint.textContent = `💡 Категория изменена вручную`;
+                hint.classList.add('active');
+                hint.classList.add('changed');
+            }
+            autoCategoryApplied = false;
+        });
+
+        function resetAutoCategory() {
+            autoCategoryApplied = false;
+            document.getElementById('categoryHint').classList.remove('active');
+            document.getElementById('categoryHint').classList.remove('changed');
+        }
+
+
+
+        // ============================================================
+        // === СОХРАНЕНИЕ ДАННЫХ ЛОКАЛЬНО ===
+        // ============================================================
+        function loadData() {
+            const stored = localStorage.getItem('salesData');
+            if (stored) { try { sales = JSON.parse(stored); } catch (e) { sales = []; } }
+            
+            const storedCategories = localStorage.getItem('categoriesData');
+            if (storedCategories) { try { categories = JSON.parse(storedCategories); } catch (e) {} }
+            
+            const storedRestock = localStorage.getItem('restockData');
+            if (storedRestock) { try { restockItems = JSON.parse(storedRestock); } catch (e) {} }
+            
+            const storedRepairs = localStorage.getItem('repairsData');
+            if (storedRepairs) { try { repairs = JSON.parse(storedRepairs); } catch (e) {} }
+            
+            const storedOrders = localStorage.getItem('ordersData');
+            if (storedOrders) { try { orders = JSON.parse(storedOrders); } catch (e) {} }
+            
+            const storedHistory = localStorage.getItem('productNamesHistory');
+            if (storedHistory) { try { productNamesHistory = JSON.parse(storedHistory); } catch (e) {} }
+
+            const storedHidden = localStorage.getItem('hiddenProductNames');
+if (storedHidden) { try { hiddenProductNames = JSON.parse(storedHidden); } catch (e) { hiddenProductNames = []; } }
+            
+            const storedDeleted = localStorage.getItem('deletedIds');
+            if (storedDeleted) { try { deletedIds = JSON.parse(storedDeleted); } catch (e) { deletedIds = {}; } }
+
+            updateCategorySelect();
+            updateEditCategorySelect();
+            updateCategoryFilter();
+
+            const today = getCurrentDateTime().date;
+            document.getElementById('viewDate').value = today;
+            document.getElementById('saleDate').value = today;
+            currentViewDate = today;
+
+            render();
+        }
+
+        function saveDataLocal() {
+            localStorage.setItem('salesData', JSON.stringify(sales));
+            localStorage.setItem('categoriesData', JSON.stringify(categories));
+            localStorage.setItem('restockData', JSON.stringify(restockItems));
+            localStorage.setItem('repairsData', JSON.stringify(repairs));
+            localStorage.setItem('ordersData', JSON.stringify(orders));
+            localStorage.setItem('productNamesHistory', JSON.stringify(productNamesHistory));
+            localStorage.setItem('hiddenProductNames', JSON.stringify(hiddenProductNames));
+            localStorage.setItem('deletedIds', JSON.stringify(deletedIds));
+        }
+
+function saveData() {
+    updateProductNamesHistory();
+    saveDataLocal();
+    
+    // Автосохранение в файл (если включено)
+    if (autoSaveDirHandle) {
+        autoSaveToFile();
+    }
+}
+
+        // ============================================================
+        // === АВТОДОПОЛНЕНИЕ ===
+        // ============================================================
+function updateProductNamesHistory() {
+    const names = new Set();
+    sales.forEach(sale => { if (sale.name && sale.name.trim()) names.add(sale.name.trim()); });
+    // Убираем скрытые названия
+    productNamesHistory = Array.from(names)
+        .filter(name => !hiddenProductNames.includes(name))
+        .sort();
+}
+
+        function showAutocomplete(input) {
+            const list = document.getElementById('autocompleteList');
+            const value = input.value.toLowerCase().trim();
+            if (!value) { list.classList.remove('active'); return; }
+            
+            const matches = productNamesHistory.filter(name => 
+                name.toLowerCase().includes(value) && name.toLowerCase() !== value
+            );
+            
+            const similar = findSimilarProducts(input.value);
+            
+            if (matches.length === 0 && similar.length === 0) { 
+                list.classList.remove('active'); 
+                return; 
+            }
+            
+            let html = '';
+            
+if (similar.length > 0) {
+    html += similar.slice(0, 5).map(name => 
+        `<div class="item similar" data-value="${name}">
+            <span>${name} (похожий)</span>
+            <button type="button" class="remove-suggestion" onclick="event.stopPropagation(); hideProductName('${name.replace(/'/g, "\\'")}')" title="Убрать из подсказок">✕</button>
+        </div>`
+    ).join('');
+}
+
+const showMatches = matches.slice(0, 8 - similar.length);
+html += showMatches.map(name => 
+    `<div class="item" data-value="${name}">
+        <span>${name}</span>
+        <button type="button" class="remove-suggestion" onclick="event.stopPropagation(); hideProductName('${name.replace(/'/g, "\\'")}')" title="Убрать из подсказок">✕</button>
+    </div>`
+).join('');
+            
+list.innerHTML = html;
+list.querySelectorAll('.item').forEach(el => {
+    // Клик по самому названию — подставить
+    el.addEventListener('click', function(e) {
+        // Если кликнули по кнопке ✕ — не подставляем
+        if (e.target.classList.contains('remove-suggestion')) return;
+        input.value = this.dataset.value;
+        list.classList.remove('active');
+        input.dispatchEvent(new Event('input'));
+    });
+});
+list.classList.add('active');
+        }
+
+        function hideProductName(name) {
+    if (!name) return;
+    if (!confirm(`Убрать "${name}" из подсказок?\n\nПродажи с этим названием останутся, но в автодополнении его больше не будет.`)) {
+        return;
+    }
+    if (!hiddenProductNames.includes(name)) {
+        hiddenProductNames.push(name);
+    }
+    updateProductNamesHistory();
+    saveDataLocal();
+    // Обновляем список подсказок
+    showAutocomplete(document.getElementById('productName'));
+    showToast(`🗑️ "${name}" убрано из подсказок`);
+}
+
+        // ============================================================
+        // === КАТЕГОРИИ (селекты) ===
+        // ============================================================
+        function updateCategorySelect() {
+            const select = document.getElementById('category');
+            const currentValue = select.value;
+            select.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                select.appendChild(option);
+            });
+            const addOption = document.createElement('option');
+            addOption.value = '__add_category__';
+            addOption.textContent = '+ Добавить категорию';
+            select.appendChild(addOption);
+
+            if (categories.includes(currentValue)) {
+                select.value = currentValue;
+            } else {
+                select.value = categories[0] || '';
+            }
+        }
+
+        function updateEditCategorySelect() {
+            const select = document.getElementById('editCategory');
+            const currentValue = select.value;
+            select.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                select.appendChild(option);
+            });
+
+            if (categories.includes(currentValue)) {
+                select.value = currentValue;
+            } else {
+                select.value = categories[0] || '';
+            }
+        }
+
+        function updateCategoryFilter() {
+            const filter = document.getElementById('categoryFilter');
+            const currentValue = filter.value;
+            filter.innerHTML = '<option value="">Все категории</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                filter.appendChild(option);
+            });
+            filter.value = currentValue;
+        }
+
+        function openAddCategoryModal(context) {
+            categorySelectContext = context;
+            document.getElementById('addCategoryModal').classList.add('active');
+            document.getElementById('newCategoryName').value = '';
+            document.getElementById('newCategoryName').focus();
+        }
+
+        function closeAddCategoryModal() {
+            document.getElementById('addCategoryModal').classList.remove('active');
+        }
+
+        function confirmAddCategory() {
+            const input = document.getElementById('newCategoryName');
+            const name = input.value.trim();
+            if (!name) {
+                alert('Введите название категории');
+                return;
+            }
+            if (categories.includes(name)) {
+                alert('Такая категория уже существует');
+                return;
+            }
+            categories.push(name);
+            saveData();
+            updateCategorySelect();
+            updateEditCategorySelect();
+            updateCategoryFilter();
+            const select = document.getElementById(categorySelectContext);
+            select.value = name;
+            closeAddCategoryModal();
+            showToast(`✅ Категория "${name}" добавлена`);
+        }
+
+        document.addEventListener('change', function(e) {
+            if (e.target.id === 'category' && e.target.value === '__add_category__') {
+                openAddCategoryModal('category');
+                e.target.value = categories[0] || '';
+            }
+        });
+
+        // ============================================================
+        // === ВАЛИДАЦИЯ ===
+        // ============================================================
+        function validateSaleInput(name, price, date) {
+            const errors = [];
+            if (!name || name.trim().length === 0) {
+                errors.push('Введите название товара');
+            } else if (name.length > 100) {
+                errors.push('Название товара слишком длинное (максимум 100 символов)');
+            }
+            if (isNaN(price) || price <= 0) {
+                errors.push('Введите корректную цену');
+            } else if (price > 10000000) {
+                errors.push('Цена слишком большая');
+            }
+            if (!date) {
+                errors.push('Выберите дату');
+            }
+            return errors;
+        }
+
+        // ============================================================
+        // === ЗАКУПКИ ===
+        // ============================================================
+        function toggleRestockSection() {
+            const section = document.getElementById('restockSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            if (section.style.display === 'block') renderRestock();
+        }
+
+        function addRestockItem() {
+            const input = document.getElementById('restockInput');
+            const name = input.value.trim();
+            if (!name) {
+                showToast('❌ Введите название товара', 'error');
+                return;
+            }
+            if (restockItems.some(i => i.name === name)) {
+                showToast('❌ Этот товар уже есть в списке', 'error');
+                return;
+            }
+            restockItems.push({ name, purchased: false, purchasedDate: null });
+            input.value = '';
+            renderRestock();
+            updateRestockBadge();
+            showToast(`✅ "${name}" добавлен в список закупки`);
+            saveData();
+        }
+
+        function deleteRestockItem(name) {
+            if (!confirm(`Удалить "${name}" из списка на закупку?`)) return;
+            restockItems = restockItems.filter(i => i.name !== name);
+            renderRestock();
+            updateRestockBadge();
+            saveData();
+        }
+
+        function updateRestockBadge() {
+            const count = restockItems.filter(i => !i.purchased).length;
+            document.getElementById('restockCount').textContent = count;
+        }
+
+        function renderRestock() {
+            const grid = document.getElementById('restockGrid');
+            if (!grid) return;
+            if (restockItems.length === 0) {
+                grid.innerHTML = '<div class="restock-empty">✨ Все товары в наличии</div>';
+                return;
+            }
+            const sorted = [...restockItems].sort((a, b) => {
+                if (a.purchased && !b.purchased) return 1;
+                if (!a.purchased && b.purchased) return -1;
+                return 0;
+            });
+            grid.innerHTML = sorted.map(item => `
+                <div class="restock-item" style="${item.purchased ? 'opacity:0.6;' : ''}">
+                    <div class="item-left">
+                        <input type="checkbox" ${item.purchased ? 'checked' : ''} 
+                               onchange="toggleRestockPurchased('${item.name.replace(/'/g, "\\'")}')">
+                        <span class="item-name ${item.purchased ? 'purchased' : ''}">${item.name}</span>
+                    </div>
+                    <div class="item-actions">
+                        ${item.purchased ? `<span class="restock-date">✅ ${new Date(item.purchasedDate).toLocaleDateString('ru-RU')}</span>` : ''}
+                        <button class="btn-delete-item" onclick="deleteRestockItem('${item.name.replace(/'/g, "\\'")}')">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleRestockPurchased(name) {
+            const item = restockItems.find(i => i.name === name);
+            if (item) {
+                item.purchased = !item.purchased;
+                item.purchasedDate = item.purchased ? new Date().toISOString() : null;
+                saveData();
+                renderRestock();
+                updateRestockBadge();
+            }
+        }
+
+        function copyRestockList() {
+            const items = restockItems.filter(i => !i.purchased);
+            if (items.length === 0) {
+                showToast('📦 Список закупок пуст', 'error');
+                return;
+            }
+            let text = '📦 СПИСОК ТОВАРОВ ДЛЯ ЗАКУПКИ\n';
+            text += '='.repeat(50) + '\n';
+            text += `Дата: ${getCurrentDateTime().date}\n`;
+            text += `Всего позиций: ${items.length}\n`;
+            text += '='.repeat(50) + '\n\n';
+            items.forEach((item, index) => { text += `${index + 1}. ${item.name}\n`; });
+            text += '\n' + '='.repeat(50) + '\n';
+            text += `CONNECT | Учет продаж`;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`✅ Список скопирован! (${items.length} позиций)`);
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast(`✅ Список скопирован! (${items.length} позиций)`);
+            });
+        }
+
+        function exportRestockToFile() {
+            const items = restockItems.filter(i => !i.purchased);
+            if (items.length === 0) {
+                showToast('📦 Список закупок пуст', 'error');
+                return;
+            }
+            let text = '📦 СПИСОК ТОВАРОВ ДЛЯ ЗАКУПКИ\n';
+            text += '='.repeat(50) + '\n';
+            text += `Дата: ${getCurrentDateTime().date}\n`;
+            text += `Время: ${getCurrentDateTime().time}\n`;
+            text += `Всего позиций: ${items.length}\n`;
+            text += '='.repeat(50) + '\n\n';
+            items.forEach((item, index) => { text += `${index + 1}. ${item.name}\n`; });
+            text += '\n' + '='.repeat(50) + '\n';
+            text += `CONNECT | Учет продаж\n`;
+            text += `Сгенерировано: ${getCurrentDateTime().date} ${getCurrentDateTime().time}`;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Список_закупки_CONNECT_${getCurrentDateTime().date}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`💾 Файл скачан! (${items.length} позиций)`);
+        }
+
+        // ============================================================
+        // === РЕМОНТЫ ===
+        // ============================================================
+        function toggleRepairSection() {
+            const section = document.getElementById('repairSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            if (section.style.display === 'block') renderRepairs();
+        }
+
+        function renderRepairs() {
+            const grid = document.getElementById('repairGrid');
+            if (!grid) return;
+            const searchTerm = document.getElementById('repairSearch').value.toLowerCase();
+            let filtered = repairs;
+            if (searchTerm) {
+                filtered = repairs.filter(r => 
+                    r.name.toLowerCase().includes(searchTerm) ||
+                    r.phone.includes(searchTerm) ||
+                    r.device.toLowerCase().includes(searchTerm)
+                );
+            }
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="restock-empty">✨ Нет активных ремонтов</div>';
+                updateRepairBadge();
+                return;
+            }
+            const sorted = [...filtered].sort((a, b) => {
+                if (a.completed && !b.completed) return 1;
+                if (!a.completed && b.completed) return -1;
+                return 0;
+            });
+            grid.innerHTML = sorted.map(repair => `
+                <div class="repair-card ${repair.completed ? 'completed' : ''}">
+                    <div class="repair-info">
+                        <div><strong>📱 Устройство:</strong> ${repair.device}</div>
+                        <div><strong>🔧 Работа:</strong> ${repair.work}</div>
+                        <div><strong>👤 Клиент:</strong> ${repair.name}</div>
+                        <div><strong>📞 Телефон:</strong> ${repair.phone}${repair.secondPhone ? `, ${repair.secondPhone}` : ''}</div>
+                        <div><strong>💰 Предоплата:</strong> ${formatPrice(repair.prepayment)}</div>
+                        <div><strong>💵 Доплата:</strong> ${formatPrice(repair.additional)}</div>
+                        <div><strong>📅 Дата:</strong> ${repair.date} ${repair.time}</div>
+                        ${repair.completed ? `<div><strong>✅ Дата выполнения:</strong> ${repair.completedDate || 'Не указана'}</div>` : ''}
+                    </div>
+                    <div class="repair-actions">
+                        <label class="repair-checkbox">
+                            <input type="checkbox" ${repair.completed ? 'checked' : ''} 
+                                   onchange="toggleRepairCompleted('${repair.id}')">
+                            ✅ Выполнено
+                        </label>
+                        <button class="btn-delete-item" onclick="deleteRepair('${repair.id}')">✕</button>
+                    </div>
+                </div>
+            `).join('');
+            updateRepairBadge();
+        }
+
+        function toggleRepairCompleted(id) {
+            const repair = repairs.find(r => String(r.id) === String(id));
+            if (repair) {
+                repair.completed = !repair.completed;
+                repair.completedDate = repair.completed ? getCurrentDateTime().date : null;
+                saveData();
+                renderRepairs();
+            }
+        }
+
+        function deleteRepair(id) {
+            if (!confirm('Удалить этот ремонт?')) return;
+            repairs = repairs.filter(r => String(r.id) !== String(id));
+            saveData();
+            renderRepairs();
+        }
+
+        function updateRepairBadge() {
+            const count = repairs.filter(r => !r.completed).length;
+            document.getElementById('repairCount').textContent = count;
+        }
+
+        function filterRepairs() { renderRepairs(); }
+
+        function openRepairModal() {
+            document.getElementById('repairModal').classList.add('active');
+        }
+
+        function closeRepairModal() {
+            document.getElementById('repairModal').classList.remove('active');
+            document.getElementById('repairSecondPhoneGroup').style.display = 'none';
+            document.getElementById('repairSecondPhone').value = '';
+        }
+
+        function addRepairPhone() {
+            document.getElementById('repairSecondPhoneGroup').style.display = 'block';
+        }
+
+        document.getElementById('repairForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const now = getCurrentDateTime();
+            const repair = {
+                id: generateId(),
+                device: document.getElementById('repairDevice').value.trim(),
+                work: document.getElementById('repairWork').value.trim(),
+                phone: document.getElementById('repairPhone').value.trim(),
+                secondPhone: document.getElementById('repairSecondPhone').value.trim(),
+                name: document.getElementById('repairName').value.trim(),
+                prepayment: parseFloat(document.getElementById('repairPrepayment').value) || 0,
+                additional: parseFloat(document.getElementById('repairAdditional').value) || 0,
+                date: now.date,
+                time: now.time,
+                completed: false,
+                completedDate: null
+            };
+            repairs.push(repair);
+            closeRepairModal();
+            renderRepairs();
+            saveData();
+            document.getElementById('repairDevice').value = '';
+            document.getElementById('repairWork').value = '';
+            document.getElementById('repairPhone').value = '';
+            document.getElementById('repairSecondPhone').value = '';
+            document.getElementById('repairName').value = '';
+            document.getElementById('repairPrepayment').value = '0';
+            document.getElementById('repairAdditional').value = '0';
+            document.getElementById('repairSecondPhoneGroup').style.display = 'none';
+            showToast('✅ Ремонт добавлен!');
+        });
+
+        // ============================================================
+        // === ЗАКАЗЫ ===
+        // ============================================================
+        function toggleOrderSection() {
+            const section = document.getElementById('orderSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            if (section.style.display === 'block') renderOrders();
+        }
+
+        function renderOrders() {
+            const grid = document.getElementById('orderGrid');
+            if (!grid) return;
+            const searchTerm = document.getElementById('orderSearch').value.toLowerCase();
+            let filtered = orders;
+            if (searchTerm) {
+                filtered = orders.filter(o => 
+                    o.name.toLowerCase().includes(searchTerm) ||
+                    o.phone.includes(searchTerm) ||
+                    o.device.toLowerCase().includes(searchTerm)
+                );
+            }
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="restock-empty">✨ Нет активных заказов</div>';
+                updateOrderBadge();
+                return;
+            }
+            const sorted = [...filtered].sort((a, b) => {
+                if (a.completed && !b.completed) return 1;
+                if (!a.completed && b.completed) return -1;
+                return 0;
+            });
+            grid.innerHTML = sorted.map(order => `
+                <div class="order-card ${order.completed ? 'completed' : ''}">
+                    <div class="order-info">
+                        <div><strong>📱 Устройство:</strong> ${order.device}</div>
+                        <div><strong>📋 Заказ:</strong> ${order.work}</div>
+                        <div><strong>👤 Клиент:</strong> ${order.name}</div>
+                        <div><strong>📞 Телефон:</strong> ${order.phone}${order.secondPhone ? `, ${order.secondPhone}` : ''}</div>
+                        <div><strong>💰 Предоплата:</strong> ${formatPrice(order.prepayment)}</div>
+                        <div><strong>💵 Доплата:</strong> ${formatPrice(order.additional)}</div>
+                        <div><strong>📅 Дата:</strong> ${order.date} ${order.time}</div>
+                        ${order.completed ? `<div><strong>✅ Дата выполнения:</strong> ${order.completedDate || 'Не указана'}</div>` : ''}
+                    </div>
+                    <div class="order-actions">
+                        <label class="order-checkbox">
+                            <input type="checkbox" ${order.completed ? 'checked' : ''} 
+                                   onchange="toggleOrderCompleted('${order.id}')">
+                            ✅ Выполнено
+                        </label>
+                        <button class="btn-delete-item" onclick="deleteOrder('${order.id}')">✕</button>
+                    </div>
+                </div>
+            `).join('');
+            updateOrderBadge();
+        }
+
+        function toggleOrderCompleted(id) {
+            const order = orders.find(o => String(o.id) === String(id));
+            if (order) {
+                order.completed = !order.completed;
+                order.completedDate = order.completed ? getCurrentDateTime().date : null;
+                saveData();
+                renderOrders();
+            }
+        }
+
+        function deleteOrder(id) {
+            if (!confirm('Удалить этот заказ?')) return;
+            orders = orders.filter(o => String(o.id) !== String(id));
+            saveData();
+            renderOrders();
+        }
+
+        function updateOrderBadge() {
+            const count = orders.filter(o => !o.completed).length;
+            document.getElementById('orderCount').textContent = count;
+        }
+
+        function filterOrders() { renderOrders(); }
+
+        function openOrderModal() {
+            document.getElementById('orderModal').classList.add('active');
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModal').classList.remove('active');
+            document.getElementById('orderSecondPhoneGroup').style.display = 'none';
+            document.getElementById('orderSecondPhone').value = '';
+        }
+
+        function addOrderPhone() {
+            document.getElementById('orderSecondPhoneGroup').style.display = 'block';
+        }
+
+        document.getElementById('orderForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const now = getCurrentDateTime();
+            const order = {
+                id: generateId(),
+                device: document.getElementById('orderDevice').value.trim(),
+                work: document.getElementById('orderWork').value.trim(),
+                phone: document.getElementById('orderPhone').value.trim(),
+                secondPhone: document.getElementById('orderSecondPhone').value.trim(),
+                name: document.getElementById('orderName').value.trim(),
+                prepayment: parseFloat(document.getElementById('orderPrepayment').value) || 0,
+                additional: parseFloat(document.getElementById('orderAdditional').value) || 0,
+                date: now.date,
+                time: now.time,
+                completed: false,
+                completedDate: null
+            };
+            orders.push(order);
+            closeOrderModal();
+            renderOrders();
+            saveData();
+            document.getElementById('orderDevice').value = '';
+            document.getElementById('orderWork').value = '';
+            document.getElementById('orderPhone').value = '';
+            document.getElementById('orderSecondPhone').value = '';
+            document.getElementById('orderName').value = '';
+            document.getElementById('orderPrepayment').value = '0';
+            document.getElementById('orderAdditional').value = '0';
+            document.getElementById('orderSecondPhoneGroup').style.display = 'none';
+            showToast('✅ Заказ добавлен!');
+        });
+
+        // ============================================================
+        // === СТАТИСТИКА ПО МЕСЯЦАМ ===
+        // ============================================================
+        function toggleMonthlyStats() {
+            const section = document.getElementById('monthlyStatsSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            if (section.style.display === 'block') {
+                renderMonthlyStats();
+            }
+        }
+
+        function closeMonthlyStats() {
+            document.getElementById('monthlyStatsSection').style.display = 'none';
+            closeMonthDetail();
+        }
+
+        function renderMonthlyStats() {
+            const grid = document.getElementById('monthlyStatsGrid');
+            const monthMap = new Map();
+            sales.forEach(sale => {
+                const [year, month] = sale.date.split('-');
+                const key = `${year}-${month}`;
+                if (!monthMap.has(key)) monthMap.set(key, { year, month, total: 0, count: 0 });
+                const data = monthMap.get(key);
+                data.total += sale.price;
+                data.count++;
+            });
+            if (monthMap.size === 0) {
+                grid.innerHTML = '<div class="restock-empty">📊 Нет данных о продажах</div>';
+                return;
+            }
+            const sortedMonths = Array.from(monthMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            grid.innerHTML = sortedMonths.map(([key, data], index) => {
+                const monthName = monthNames[parseInt(data.month) - 1];
+                const prevMonth = sortedMonths[index + 1];
+                let diffHtml = '';
+                if (prevMonth) {
+                    const diff = data.total - prevMonth[1].total;
+                    const percent = prevMonth[1].total !== 0 ? ((diff / prevMonth[1].total) * 100).toFixed(1) : 0;
+                    const isUp = diff >= 0;
+                    diffHtml = `<div class="month-diff ${isUp ? 'up' : 'down'}">${isUp ? '📈' : '📉'} ${isUp ? '+' : ''}${diff.toLocaleString('ru-RU')} ₽ (${isUp ? '+' : ''}${percent}%)</div>`;
+                } else {
+                    diffHtml = '<div class="month-diff" style="color:#a0aec0;">📊 Первый месяц</div>';
+                }
+                return `<div class="month-card" onclick="showMonthDetail('${key}')">
+                    <div class="month-name">${monthName} ${data.year}</div>
+                    <div class="month-total">${formatPrice(data.total)}</div>
+                    <div style="font-size:12px;color:#718096;margin-top:5px;">Продаж: ${data.count}</div>
+                    ${diffHtml}
+                </div>`;
+            }).join('');
+            closeMonthDetail();
+        }
+
+        function showMonthDetail(monthKey) {
+            const [year, month] = monthKey.split('-');
+            const monthSales = sales.filter(s => {
+                const [sYear, sMonth] = s.date.split('-');
+                return sYear === year && sMonth === month;
+            });
+            const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            document.getElementById('monthDetailTitle').textContent = `📊 ${monthNames[parseInt(month) - 1]} ${year} - детальная статистика`;
+            
+            const total = monthSales.reduce((sum, s) => sum + s.price, 0);
+            const cash = monthSales.filter(s => s.payment === 'Наличные').reduce((sum, s) => sum + s.price, 0);
+            const card = monthSales.filter(s => s.payment === 'Безналичные').reduce((sum, s) => sum + s.price, 0);
+            const transfer = monthSales.filter(s => s.payment === 'Перевод').reduce((sum, s) => sum + s.price, 0);
+            
+            document.getElementById('monthDetailGrid').innerHTML = `
+                <div class="detail-card"><div class="label">Общая выручка</div><div class="value">${formatPrice(total)}</div></div>
+                <div class="detail-card"><div class="label">Наличные</div><div class="value">${formatPrice(cash)}</div></div>
+                <div class="detail-card"><div class="label">Безналичные</div><div class="value">${formatPrice(card)}</div></div>
+                <div class="detail-card"><div class="label">Перевод</div><div class="value">${formatPrice(transfer)}</div></div>
+                <div class="detail-card"><div class="label">Количество продаж</div><div class="value">${monthSales.length}</div></div>
+            `;
+            
+            renderTopProductsForMonth(monthKey);
+            renderBrandStats(monthSales);
+            
+            const categoryStats = {};
+            monthSales.forEach(s => {
+                if (!categoryStats[s.category]) categoryStats[s.category] = { count: 0, total: 0 };
+                categoryStats[s.category].count++;
+                categoryStats[s.category].total += s.price;
+            });
+            const sortedCategories = Object.entries(categoryStats).sort((a, b) => b[1].total - a[1].total);
+            let html = '<h4 style="margin:20px 0 10px;color:#2d3748;">📂 По категориям</h4>';
+            html += '<table><thead><tr><th>Категория</th><th>Продаж</th><th>Сумма</th></tr></thead><tbody>';
+            sortedCategories.forEach(([cat, data]) => {
+                html += `<tr><td>${cat}</td><td>${data.count}</td><td><strong>${formatPrice(data.total)}</strong></td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('categoryStats').innerHTML = html;
+            
+            document.getElementById('monthDetail').classList.add('active');
+        }
+
+        function renderTopProductsForMonth(monthKey) {
+            const [year, month] = monthKey.split('-');
+            const monthSales = sales.filter(sale => {
+                const [sYear, sMonth] = sale.date.split('-');
+                return sYear === year && sMonth === month;
+            });
+            
+            const productStats = {};
+            monthSales.forEach(sale => {
+                const normalizedName = normalizeProductName(sale.name);
+                if (!productStats[normalizedName]) {
+                    productStats[normalizedName] = { 
+                        count: 0, 
+                        total: 0, 
+                        displayName: sale.name
+                    };
+                }
+                productStats[normalizedName].count++;
+                productStats[normalizedName].total += sale.price;
+            });
+            
+            const filteredProducts = Object.entries(productStats)
+                .filter(([name, stats]) => stats.count >= 2)
+                .sort((a, b) => b[1].total - a[1].total)
+                .slice(0, 10);
+            
+            const container = document.getElementById('topProductsList');
+            
+            if (filteredProducts.length === 0) {
+                container.innerHTML = '<div class="empty-state">Нет товаров с 2+ продажами в этом месяце</div>';
+                return;
+            }
+            
+            container.innerHTML = filteredProducts.map(([name, stats], index) => `
+                <div class="top-product-item">
+                    <div class="top-product-name">${index + 1}. ${stats.displayName}</div>
+                    <div class="top-product-stats">
+                        <span class="top-product-count">${stats.count} шт.</span>
+                        <span class="top-product-total">${formatPrice(stats.total)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderBrandStats(monthSales) {
+            const brandStats = {};
+            brands.forEach(brand => {
+                brandStats[brand] = { count: 0, total: 0 };
+            });
+            
+            monthSales.forEach(sale => {
+                const normalizedName = sale.name.toLowerCase();
+                brands.forEach(brand => {
+                    if (normalizedName.includes(brand)) {
+                        brandStats[brand].count++;
+                        brandStats[brand].total += sale.price;
+                    }
+                });
+            });
+            
+            const container = document.getElementById('brandStatsGrid');
+            const brandNames = {
+                'awei': 'AWEi',
+                'hoco': 'Hoco',
+                'isa': 'ISA',
+                'borofone': 'Borofone',
+                'mivo': 'Mivo',
+                'celebrat': 'Celebrat'
+            };
+            
+            container.innerHTML = brands.map(brand => `
+                <div class="brand-card">
+                    <div class="brand-name">${brandNames[brand]}</div>
+                    <div class="brand-count">${brandStats[brand].count} шт.</div>
+                    <div class="brand-total">${formatPrice(brandStats[brand].total)}</div>
+                </div>
+            `).join('');
+        }
+
+        function closeMonthDetail() {
+            document.getElementById('monthDetail').classList.remove('active');
+        }
+
+        // ============================================================
+        // === ДОБАВЛЕНИЕ ПРОДАЖИ ===
+        // ============================================================
+        document.getElementById('addForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const now = getCurrentDateTime();
+            const date = document.getElementById('saleDate').value;
+            const name = document.getElementById('productName').value.trim();
+            const category = document.getElementById('category').value;
+            const price = parseFloat(document.getElementById('price').value);
+            const payment = document.getElementById('paymentMethod').value;
+            const lastItem = document.getElementById('lastItem').checked;
+
+            const errors = validateSaleInput(name, price, date);
+            if (errors.length > 0) {
+                showToast('❌ ' + errors.join('\n'), 'error');
+                return;
+            }
+
+            if (category === '__add_category__') {
+                showToast('❌ Выберите категорию', 'error');
+                return;
+            }
+
+            const sale = {
+                id: generateId(),
+                date: date,
+                time: now.time,
+                name: name,
+                category: category,
+                price: price,
+                payment: payment,
+                updatedAt: new Date().toISOString()
+            };
+            sales.push(sale);
+            
+            if (lastItem && !restockItems.some(i => i.name === name)) {
+                restockItems.push({ name, purchased: false, purchasedDate: null });
+                updateRestockBadge();
+            }
+            
+            render();
+            document.getElementById('productName').value = '';
+            document.getElementById('price').value = '';
+            document.getElementById('lastItem').checked = false;
+            document.getElementById('productName').focus();
+            resetAutoCategory();
+            saveData();
+        });
+
+        document.getElementById('productName').addEventListener('input', function() {
+            showAutocomplete(this);
+            autoSuggestCategory();
+        });
+        document.getElementById('productName').addEventListener('blur', function() {
+            setTimeout(() => document.getElementById('autocompleteList').classList.remove('active'), 200);
+        });
+        document.getElementById('productName').addEventListener('keydown', function(e) {
+            const list = document.getElementById('autocompleteList');
+            const items = list.querySelectorAll('.item');
+            if (items.length === 0) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                let idx = 0;
+                items.forEach((el, i) => { if (el.classList.contains('highlighted')) idx = i + 1; el.classList.remove('highlighted'); });
+                if (idx >= items.length) idx = 0;
+                items[idx].classList.add('highlighted');
+                items[idx].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                let idx = items.length - 1;
+                items.forEach((el, i) => { if (el.classList.contains('highlighted')) idx = i - 1; el.classList.remove('highlighted'); });
+                if (idx < 0) idx = items.length - 1;
+                items[idx].classList.add('highlighted');
+                items[idx].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                const highlighted = list.querySelector('.item.highlighted');
+                if (highlighted) {
+                    e.preventDefault();
+                    this.value = highlighted.dataset.value;
+                    list.classList.remove('active');
+                    this.dispatchEvent(new Event('input'));
+                }
+            } else if (e.key === 'Escape') {
+                list.classList.remove('active');
+            }
+        });
+
+        // ============================================================
+        // === УДАЛЕНИЕ И РЕДАКТИРОВАНИЕ ПРОДАЖ ===
+        // ============================================================
+        function deleteSale(id) {
+            if (!confirm('Удалить эту продажу?')) return;
+            
+            deletedIds[String(id)] = new Date().toISOString();
+            
+            sales = sales.filter(s => String(s.id) !== String(id));
+            render();
+            saveData();
+            showToast('🗑️ Продажа удалена');
+        }
+
+        // ===== ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕДАКТИРОВАНИЯ =====
+        function openEditModal(id) {
+            const idStr = String(id);
+            const sale = sales.find(s => String(s.id) === idStr);
+            
+            if (!sale) {
+                showToast('❌ Продажа не найдена', 'error');
+                return;
+            }
+            
+            editingSaleId = sale.id;
+            document.getElementById('editProductName').value = sale.name;
+            document.getElementById('editSaleDate').value = sale.date;
+            
+            // Обновляем селект категорий
+            const select = document.getElementById('editCategory');
+            select.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                select.appendChild(option);
+            });
+            
+            // Устанавливаем категорию
+            if (categories.includes(sale.category)) {
+                select.value = sale.category;
+            } else {
+                // Если категория была удалена — добавляем её в список
+                const option = document.createElement('option');
+                option.value = sale.category;
+                option.textContent = sale.category + ' (удалена)';
+                select.appendChild(option);
+                select.value = sale.category;
+            }
+            
+            document.getElementById('editPrice').value = sale.price;
+            document.getElementById('editPaymentMethod').value = sale.payment;
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingSaleId = null;
+        }
+
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (editingSaleId === null) return;
+            
+            const name = document.getElementById('editProductName').value.trim();
+            const category = document.getElementById('editCategory').value;
+            const price = parseFloat(document.getElementById('editPrice').value);
+            const payment = document.getElementById('editPaymentMethod').value;
+            const newDate = document.getElementById('editSaleDate').value;
+            
+            if (!name || !price) { 
+                alert('Заполните все поля!'); 
+                return; 
+            }
+            
+            const idx = sales.findIndex(s => String(s.id) === String(editingSaleId));
+            
+if (idx !== -1) {
+    sales[idx].name = name;
+    sales[idx].category = category;
+    sales[idx].price = price;
+    sales[idx].payment = payment;
+    sales[idx].date = newDate;
+    sales[idx].updatedAt = new Date().toISOString();
+
+                render();
+                closeEditModal();
+                saveData();
+                showToast('✅ Продажа обновлена');
+            } else {
+                showToast('❌ Продажа не найдена', 'error');
+            }
+        });
+
+        // ============================================================
+        // === КОПИРОВАНИЕ ДЛЯ GOOGLE ===
+        // ============================================================
+        function copySalesForGoogle() {
+            let filteredSales = getFilteredSales();
+            const viewDate = currentViewDate || getCurrentDateTime().date;
+            
+            if (!searchTerm && !categoryFilterTerm) {
+                filteredSales = filteredSales.filter(s => s.date === viewDate);
+            }
+            
+            if (filteredSales.length === 0) {
+                showToast('❌ Нет продаж для копирования', 'error');
+                return;
+            }
+            
+            const sortedSales = [...filteredSales].sort((a, b) => {
+                if (a.date < b.date) return -1;
+                if (a.date > b.date) return 1;
+                if (a.time < b.time) return -1;
+                if (a.time > b.time) return 1;
+                return 0;
+            });
+            
+            let text = '';
+            sortedSales.forEach(sale => {
+                text += `${sale.name || ''}\t${sale.price || 0}\t${getPaymentShort(sale.payment || '')}\n`;
+            });
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`✅ Скопировано ${sortedSales.length} продаж! Вставьте (Ctrl+Shift+V)`);
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast(`✅ Скопировано ${sortedSales.length} продаж! Вставьте (Ctrl+Shift+V)`);
+                } catch (err) {
+                    showToast('❌ Не удалось скопировать', 'error');
+                }
+                document.body.removeChild(textarea);
+            });
+        }
+
+        // ============================================================
+        // === ЭКСПОРТ CSV / EXCEL ===
+        // ============================================================
+        function exportToExcel() {
+            if (sales.length === 0) { alert('Нет данных для экспорта'); return; }
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+            xml += '<?mso-application progid="Excel.Sheet"?>\n';
+            xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+            xml += '<Styles>\n';
+            xml += '  <Style ss:ID="Header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#667eea" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>\n';
+            xml += '  <Style ss:ID="Money"><NumberFormat ss:Format="#,##0.00 ₽"/></Style>\n';
+            xml += '</Styles>\n';
+            xml += '<Worksheet ss:Name="Продажи"><Table>\n';
+            xml += '<Row>\n';
+            ['Дата', 'Время', 'Товар', 'Категория', 'Стоимость', 'Оплата'].forEach(header => {
+                xml += `  <Cell ss:StyleID="Header"><Data ss:Type="String">${header}</Data></Cell>\n`;
+            });
+            xml += '</Row>\n';
+            [...sales].sort((a, b) => a.date.localeCompare(b.date)).forEach(sale => {
+                xml += '<Row>\n';
+                xml += `  <Cell><Data ss:Type="String">${sale.date}</Data></Cell>\n`;
+                xml += `  <Cell><Data ss:Type="String">${sale.time || ''}</Data></Cell>\n`;
+                xml += `  <Cell><Data ss:Type="String">${sale.name}</Data></Cell>\n`;
+                xml += `  <Cell><Data ss:Type="String">${sale.category}</Data></Cell>\n`;
+                xml += `  <Cell ss:StyleID="Money"><Data ss:Type="Number">${sale.price}</Data></Cell>\n`;
+                xml += `  <Cell><Data ss:Type="String">${sale.payment}</Data></Cell>\n`;
+                xml += '</Row>\n';
+            });
+            xml += '</Table></Worksheet></Workbook>';
+            const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const safeShopName = (shopName || DEFAULT_SHOP_NAME).replace(/\s+/g, '_');
+a.download = `${safeShopName}_sales_${getCurrentDateTime().date}.xls`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📊 Файл Excel создан!');
+        }
+
+        function exportCSV() {
+            if (sales.length === 0) { alert('Нет данных для экспорта'); return; }
+            const sorted = [...sales].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+            let csv = 'Дата;Время;Товар;Категория;Стоимость;Оплата\n';
+            sorted.forEach(s => { csv += `${s.date};${s.time || ''};${s.name};${s.category};${s.price};${s.payment}\n`; });
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+           const safeShopName = (shopName || DEFAULT_SHOP_NAME).replace(/\s+/g, '_');
+a.download = `${safeShopName}_sales_${getCurrentDateTime().date}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ============================================================
+// === ЭКСПОРТ ВСЕХ ДАННЫХ (JSON) ===
+// ============================================================
+function exportAllData() {
+    const data = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        shopName: shopName,
+        sales: sales,
+        categories: categories,
+        restockItems: restockItems,
+        repairs: repairs,
+        orders: orders,
+        productNamesHistory: productNamesHistory,
+        hiddenProductNames: hiddenProductNames,
+        deletedIds: deletedIds
+    };
+    
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeShopName = (shopName || 'МАГАЗИН').replace(/\s+/g, '_');
+    a.download = `${safeShopName}_backup_${getCurrentDateTime().date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    const totalItems = sales.length + repairs.length + orders.length + restockItems.length;
+    showToast(`💾 Сохранено! Продаж: ${sales.length}, ремонтов: ${repairs.length}, заказов: ${orders.length}, закупок: ${restockItems.length}`);
+}
+
+// ============================================================
+// === ИМПОРТ ВСЕХ ДАННЫХ (JSON) ===
+// ============================================================
+function importAllData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.readAsText(file, 'UTF-8');
+    
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // Проверка: это наш файл?
+            if (!data.sales && !data.repairs && !data.orders) {
+                alert('❌ Это не файл резервной копии CONNECT');
+                event.target.value = '';
+                return;
+            }
+            
+            // Спрашиваем режим
+            const replace = confirm(
+                `📂 Файл загружен.\n\n` +
+                `Продаж: ${(data.sales || []).length}\n` +
+                `Ремонтов: ${(data.repairs || []).length}\n` +
+                `Заказов: ${(data.orders || []).length}\n` +
+                `Закупок: ${(data.restockItems || []).length}\n\n` +
+                `Нажмите ОК — ЗАМЕНИТЬ все текущие данные.\n` +
+                `Нажмите Отмена — ДОБАВИТЬ к текущим (без дубликатов).`
+            );
+            
+            if (replace) {
+                // Замена
+                if (!confirm('⚠️ Все текущие данные будут удалены. Продолжить?')) {
+                    event.target.value = '';
+                    return;
+                }
+                sales = data.sales || [];
+                categories = data.categories || ['Чехлы', 'Стекло', 'Зарядка', 'Наушники', 'Аксессуары'];
+                restockItems = data.restockItems || [];
+                repairs = data.repairs || [];
+                orders = data.orders || [];
+                productNamesHistory = data.productNamesHistory || [];
+                hiddenProductNames = data.hiddenProductNames || [];
+                deletedIds = data.deletedIds || {};
+                
+                if (data.shopName) {
+                    shopName = data.shopName;
+                    localStorage.setItem('shopName', shopName);
+                    updateShopNameDisplay();
+                }
+                
+                updateProductNamesHistory();
+                saveDataLocal();
+                updateCategorySelect();
+                updateEditCategorySelect();
+                updateCategoryFilter();
+                render();
+                
+                showToast(`✅ Все данные заменены! Продаж: ${sales.length}`);
+            } else {
+                // Добавление (без дубликатов)
+                let addedSales = 0, addedRepairs = 0, addedOrders = 0, addedRestock = 0;
+                
+                // Продажи
+                const existingSaleIds = new Set(sales.map(s => String(s.id)));
+                (data.sales || []).forEach(s => {
+                    if (!existingSaleIds.has(String(s.id))) {
+                        sales.push(s);
+                        addedSales++;
+                    }
+                });
+                
+                // Ремонты
+                const existingRepairIds = new Set(repairs.map(r => String(r.id)));
+                (data.repairs || []).forEach(r => {
+                    if (!existingRepairIds.has(String(r.id))) {
+                        repairs.push(r);
+                        addedRepairs++;
+                    }
+                });
+                
+                // Заказы
+                const existingOrderIds = new Set(orders.map(o => String(o.id)));
+                (data.orders || []).forEach(o => {
+                    if (!existingOrderIds.has(String(o.id))) {
+                        orders.push(o);
+                        addedOrders++;
+                    }
+                });
+                
+                // Закупки (по имени)
+                const existingRestockNames = new Set(restockItems.map(i => i.name));
+                (data.restockItems || []).forEach(i => {
+                    if (!existingRestockNames.has(i.name)) {
+                        restockItems.push(i);
+                        addedRestock++;
+                    }
+                });
+                
+                // Категории (объединение)
+                const catSet = new Set([...categories, ...(data.categories || [])]);
+                categories = Array.from(catSet);
+                
+                // Скрытые названия (объединение)
+                (data.hiddenProductNames || []).forEach(n => {
+                    if (!hiddenProductNames.includes(n)) {
+                        hiddenProductNames.push(n);
+                    }
+                });
+                
+                // История товаров
+                updateProductNamesHistory();
+                saveDataLocal();
+                updateCategorySelect();
+                updateEditCategorySelect();
+                updateCategoryFilter();
+                render();
+                
+                showToast(`✅ Добавлено: продаж ${addedSales}, ремонтов ${addedRepairs}, заказов ${addedOrders}, закупок ${addedRestock}`);
+            }
+            
+        } catch (err) {
+            alert('❌ Ошибка при чтении файла: ' + err.message);
+        }
+        
+        event.target.value = '';
+    };
+    
+    reader.onerror = function() {
+        alert('❌ Ошибка при чтении файла');
+        event.target.value = '';
+    };
+}
+
+        function clearAll() {
+            if (!confirm('Удалить все данные? Это действие нельзя отменить!')) return;
+            if (!confirm('Вы уверены?')) return;
+            sales.forEach(s => { deletedIds[String(s.id)] = new Date().toISOString(); });
+            sales = [];
+            restockItems = [];
+            repairs = [];
+            orders = [];
+            productNamesHistory = [];
+            render();
+            saveData();
+        }
+
+        // ============================================================
+        // === БЫСТРЫЕ ДАТЫ ===
+        // ============================================================
+        function setDateToday() {
+            const today = getCurrentDateTime().date;
+            document.getElementById('viewDate').value = today;
+            document.getElementById('saleDate').value = today;
+            currentViewDate = today;
+            render();
+        }
+        function setDateYesterday() {
+            const date = new Date();
+            date.setDate(date.getDate() - 1);
+            const dateStr = date.toISOString().split('T')[0];
+            document.getElementById('viewDate').value = dateStr;
+            currentViewDate = dateStr;
+            render();
+        }
+        function setDateDaysAgo(days) {
+            const date = new Date();
+            date.setDate(date.getDate() - days);
+            const dateStr = date.toISOString().split('T')[0];
+            document.getElementById('viewDate').value = dateStr;
+            currentViewDate = dateStr;
+            render();
+        }
+        function setTodayView() {
+            const today = getCurrentDateTime().date;
+            document.getElementById('viewDate').value = today;
+            currentViewDate = today;
+            render();
+        }
+
+        // ============================================================
+        // === ПОИСК И ФИЛЬТРАЦИЯ ===
+        // ============================================================
+function setupSearchAndFilter() {
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    
+    if (!searchInput || !categoryFilter) {
+        console.warn('⚠️ Поля поиска не найдены');
+        return;
+    }
+    
+    // Убираем старые обработчики, чтобы не было дублей
+    searchInput.oninput = null;
+    categoryFilter.onchange = null;
+    
+    // Поиск по тексту
+    searchInput.oninput = function() {
+        searchTerm = this.value.toLowerCase().trim();
+        renderTable();
+    };
+    
+    // Фильтр по категории
+    categoryFilter.onchange = function() {
+        categoryFilterTerm = this.value;
+        renderTable();
+    };
+    
+    updateCategoryFilter();
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+}
+
+function clearAllFilters() {
+    // Очищаем текстовый поиск
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    searchTerm = '';
+    
+    // Очищаем категорию
+    const categoryFilter = document.getElementById('categoryFilter');
+    if (categoryFilter) categoryFilter.value = '';
+    categoryFilterTerm = '';
+    
+// Очищаем календарь
+calPickStart = null;
+calPickEnd = null;
+dateFromTerm = '';
+dateToTerm = '';
+updateDateRangeButton();
+closeCalendar();
+    
+    // Сбрасываем глобальный флаг выбора (если он есть)
+    if (typeof pickingStart !== 'undefined') {
+        pickingStart = true;
+    }
+    
+    renderTable();
+    showToast('🔄 Все фильтры сброшены', 'info');
+}
+
+function resetDatePickerState() {
+    // Эта функция нужна для сброса состояния календаря
+    const dateRangePicker = document.getElementById('dateRangePicker');
+    if (dateRangePicker) {
+        const wrapper = dateRangePicker.closest('.date-range-wrapper');
+        if (wrapper) {
+            wrapper.classList.remove('picking', 'has-range');
+        }
+        const hint = document.getElementById('dateRangeHint');
+        if (hint) hint.textContent = 'Выберите начало';
+    }
+}
+
+function toggleSearchPanel() {
+    const panel = document.getElementById('searchPanel');
+    const btn = document.getElementById('searchToggleBtn');
+    panel.classList.toggle('active');
+    btn.classList.toggle('active');
+}
+
+        function getFilteredSales() {
+    let filteredSales = sales;
+    if (searchTerm) {
+        filteredSales = filteredSales.filter(s => s.name.toLowerCase().includes(searchTerm));
+    }
+    if (categoryFilterTerm) {
+        filteredSales = filteredSales.filter(s => s.category === categoryFilterTerm);
+    }
+    if (dateFromTerm) {
+        filteredSales = filteredSales.filter(s => s.date >= dateFromTerm);
+    }
+    if (dateToTerm) {
+        filteredSales = filteredSales.filter(s => s.date <= dateToTerm);
+    }
+    return filteredSales;
+}
+
+        // ============================================================
+        // === РЕНДЕР ===
+        // ============================================================
+        function render() {
+            const viewDate = currentViewDate || getCurrentDateTime().date;
+            const daySales = sales.filter(s => s.date === viewDate);
+            renderTable();
+            
+            const dayTotal = daySales.reduce((sum, s) => sum + s.price, 0);
+            document.getElementById('dayTotal').textContent = formatPrice(dayTotal);
+            document.getElementById('dayCash').textContent = formatPrice(daySales.filter(s => s.payment === 'Наличные').reduce((sum, s) => sum + s.price, 0));
+            document.getElementById('dayCard').textContent = formatPrice(daySales.filter(s => s.payment === 'Безналичные').reduce((sum, s) => sum + s.price, 0));
+            document.getElementById('dayTransfer').textContent = formatPrice(daySales.filter(s => s.payment === 'Перевод').reduce((sum, s) => sum + s.price, 0));
+            
+            const today = getCurrentDateTime().date;
+            document.getElementById('selectedDateLabel').textContent = viewDate === today ? 'Сегодня' : formatDateDisplay(viewDate);
+            document.getElementById('salesListLabel').textContent = viewDate === today ? 'Продажи за сегодня' : `Продажи за ${formatDateDisplay(viewDate)}`;
+            document.getElementById('viewDayTotal').textContent = formatPrice(dayTotal);
+            
+            const now = new Date();
+            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+            const currentYear = now.getFullYear();
+            const monthSales = sales.filter(s => { const [y, m] = s.date.split('-'); return y === String(currentYear) && m === currentMonth; });
+            const monthTotal = monthSales.reduce((sum, s) => sum + s.price, 0);
+            document.getElementById('monthTotalValue').textContent = formatPrice(monthTotal);
+            document.getElementById('monthCash').textContent = formatPrice(monthSales.filter(s => s.payment === 'Наличные').reduce((sum, s) => sum + s.price, 0));
+            document.getElementById('monthCard').textContent = formatPrice(monthSales.filter(s => s.payment === 'Безналичные').reduce((sum, s) => sum + s.price, 0));
+            document.getElementById('monthTransfer').textContent = formatPrice(monthSales.filter(s => s.payment === 'Перевод').reduce((sum, s) => sum + s.price, 0));
+            
+            renderRestock();
+            renderRepairs();
+            renderOrders();
+            updateRestockBadge();
+            updateRepairBadge();
+            updateOrderBadge();
+           // Обновляем дату продажи только если она пустая или это не ручной выбор пользователя
+const saleDateInput = document.getElementById('saleDate');
+if (!saleDateInput.value || saleDateInput.dataset.auto === 'true') {
+    saleDateInput.value = getCurrentDateTime().date;
+    saleDateInput.dataset.auto = 'true';
+}
+            updateProductNamesHistory();
+        }
+
+        function renderTable() {
+            const viewDate = currentViewDate || getCurrentDateTime().date;
+            let filteredSales = getFilteredSales();
+            
+            const hasDateRange = dateFromTerm || dateToTerm;
+            if (!hasDateRange && !searchTerm && !categoryFilterTerm) {
+                filteredSales = filteredSales.filter(s => s.date === viewDate);
+            }
+            
+            const tbody = document.getElementById('salesTableBody');
+            if (filteredSales.length === 0) {
+                const message = (searchTerm || categoryFilterTerm) ? 'Ничего не найдено' : `Нет продаж за ${formatDateDisplay(viewDate)}`;
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">${(searchTerm || categoryFilterTerm) ? '🔍' : '📦'}</div><p>${message}</p></div></td></tr>`;
+                return;
+            }
+            
+            const sortedSales = [...filteredSales].sort((a, b) => {
+                if (a.date < b.date) return -1;
+                if (a.date > b.date) return 1;
+                if (a.time < b.time) return -1;
+                if (a.time > b.time) return 1;
+                return 0;
+            });
+            
+            tbody.innerHTML = sortedSales.map(s => `
+                <tr>
+                    <td style="white-space: nowrap;">${s.date.split('-').reverse().join('.')}</td>
+                    <td class="time-column">${s.time || '--:--'}</td>
+                    <td><strong>${s.name}</strong></td>
+                    <td><span class="badge" style="background:#e2e8f0;color:#2d3748;">${s.category}</span></td>
+                    <td><strong>${formatPrice(s.price)}</strong></td>
+                    <td><span class="badge ${getPaymentBadge(s.payment)}">${getPaymentEmoji(s.payment)} ${s.payment}</span></td>
+                    <td><div class="action-buttons"><button class="btn-edit" onclick="openEditModal('${s.id}')">✏️</button><button class="btn-delete" onclick="deleteSale('${s.id}')">✕</button></div></td>
+                </tr>
+            `).join('');
+        }
+
+        // ============================================================
+        // === ИМПОРТ CSV ===
+        // ============================================================
+        function convertDate(dateStr) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) { const p = dateStr.split('/'); return `${p[2]}-${p[1]}-${p[0]}`; }
+            if (/^\d{2}\.\d{2}\.\d{4}$/.test(dateStr)) { const p = dateStr.split('.'); return `${p[2]}-${p[1]}-${p[0]}`; }
+            if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) { const p = dateStr.split('-'); return `${p[2]}-${p[1]}-${p[0]}`; }
+            return null;
+        }
+
+        function importCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.readAsText(file, 'UTF-8');
+            reader.onload = function(e) {
+                try {
+                    let text = e.target.result;
+                    if (text.includes('Ã') || text.includes('â') || text.includes('Ð')) {
+                        const bytes = new Uint8Array(text.split('').map(c => c.charCodeAt(0)));
+                        text = new TextDecoder('windows-1251').decode(bytes);
+                    }
+                    let delimiter = ';';
+                    if (text.includes(',') && !text.includes(';')) delimiter = ',';
+                    const lines = text.split('\n').filter(line => line.trim());
+                    if (lines.length < 2) { alert('Файл должен содержать заголовки и хотя бы одну запись'); return; }
+                    const headers = lines[0].split(delimiter).map(h => h.replace(/^"|"$/g, '').trim());
+                    const expected = ['Дата','Время','Товар','Категория','Стоимость','Оплата'];
+                    const cleanMatch = expected.every(h => headers.some(header => header.includes(h) || h.includes(header)));
+                    if (!cleanMatch) { alert('Неверный формат CSV'); return; }
+                    importedData = [];
+                    const now = getCurrentDateTime();
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = lines[i].split(delimiter).map(v => v.replace(/^"|"$/g, '').trim());
+                        if (values.length < 6) continue;
+                        const dateStr = values[0];
+                        let time = values[1] || now.time;
+                        const name = values[2], category = values[3], price = parseFloat(values[4]), payment = values[5];
+                        if (!dateStr || !name || isNaN(price) || !payment) continue;
+                        const date = convertDate(dateStr);
+                        if (!date) continue;
+                        if (!time) time = now.time;
+                        const fixedName = fixEncoding(name);
+                        const fixedCategory = fixEncoding(category), fixedPayment = fixEncoding(payment);
+                        if (!categories.includes(fixedCategory) && fixedCategory !== 'Другое') categories.push(fixedCategory);
+                        importedData.push({ date, time, name: fixedName, category: fixedCategory, price, payment: fixedPayment });
+                    }
+                    if (importedData.length === 0) { alert('Не найдено корректных записей'); return; }
+                    showImportPreview(importedData);
+                } catch (err) {
+                    alert('Ошибка при чтении файла: ' + err.message);
+                }
+            };
+            reader.onerror = function() { alert('Ошибка при чтении файла'); };
+            event.target.value = '';
+        }
+
+        function showImportPreview(data) {
+            const preview = document.getElementById('importPreview');
+            let html = `<div style="margin-bottom:10px;font-weight:600;color:#48bb78;">✅ Найдено ${data.length} записей</div>`;
+            html += `<div class="import-preview"><table><thead><tr><th>Дата</th><th>Время</th><th>Товар</th><th>Категория</th><th>Стоимость</th><th>Оплата</th></tr></thead><tbody>`;
+            data.slice(0, 10).forEach(item => {
+                html += `<tr><td>${item.date}</td><td>${item.time}</td><td>${item.name}</td><td>${item.category}</td><td>${item.price}</td><td>${item.payment}</td></tr>`;
+            });
+            if (data.length > 10) html += `<tr><td colspan="6" style="text-align:center;">... и еще ${data.length - 10} записей</td></tr>`;
+            html += `</tbody></table></div>`;
+            preview.innerHTML = html;
+            document.getElementById('confirmImportBtn').style.display = 'block';
+            document.getElementById('importModal').classList.add('active');
+        }
+
+        function confirmImport() {
+            if (importedData.length === 0) return;
+            const mode = document.querySelector('input[name="importMode"]:checked').value;
+            
+            const now = new Date().toISOString();
+            let added = 0;
+            let skipped = 0;
+            
+            if (mode === 'replace') {
+                if (!confirm('⚠️ Все текущие данные будут удалены. Продолжить?')) return;
+                sales.forEach(s => { deletedIds[String(s.id)] = now; });
+                sales = [];
+            }
+            
+            importedData.forEach(item => {
+                const isDuplicate = sales.some(s => 
+                    s.date === item.date && 
+                    s.time === item.time && 
+                    s.name === item.name && 
+                    s.price === item.price &&
+                    s.payment === item.payment
+                );
+                
+                if (isDuplicate && mode !== 'replace') {
+                    skipped++;
+                    return;
+                }
+                
+                sales.push({
+                    id: generateId(),
+                    updatedAt: now,
+                    date: item.date,
+                    time: item.time,
+                    name: item.name,
+                    category: item.category,
+                    price: item.price,
+                    payment: item.payment
+                });
+                added++;
+            });
+            
+            importedData = [];
+            closeImportModal();
+            render();
+            
+            updateProductNamesHistory();
+            saveDataLocal();
+            
+            let msg = `✅ Импортировано: ${added}`;
+            if (skipped > 0) msg += `, пропущено дубликатов: ${skipped}`;
+            alert(msg);
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('active');
+            document.getElementById('confirmImportBtn').style.display = 'none';
+            document.getElementById('importPreview').innerHTML = '';
+            importedData = [];
+        }
+
+        // ============================================================
+        // === ИНИЦИАЛИЗАЦИЯ ===
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('=== ЗАПУСК ПРИЛОЖЕНИЯ ===');
+            
+            loadData();
+            loadShopName();
+
+// Восстановление автосохранения
+(async function restoreAutoSave() {
+    if (isFileSystemSupported() && localStorage.getItem('autoSaveEnabled') === 'true') {
+        try {
+            const handle = await loadDirHandle();
+            if (handle) {
+                const hasPermission = await verifyPermission(handle);
+                if (hasPermission) {
+                    autoSaveDirHandle = handle;
+                    updateAutoSaveButton();
+                    // Пытаемся загрузить данные из файла
+                    const loaded = await loadFromAutoSaveFile();
+                    if (loaded) {
+                        showToast('📂 Данные загружены из автосохранения');
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Не удалось восстановить автосохранение:', e);
+        }
+    }
+    updateAutoSaveButton();
+})();
+
+// Инициализация фильтров (на случай, если панель появилась позже)
+setupSearchAndFilter();
+console.log('✅ Фильтры инициализированы');
+
+// Приветствие при первом запуске (если ещё не спрашивали)
+if (!localStorage.getItem('shopNameAsked')) {
+    setTimeout(() => showWelcomeModal(), 500);
+}
+
+// Если пользователь вручную меняет дату — запоминаем, что это ручной выбор
+document.getElementById('saleDate').addEventListener('change', function() {
+    this.dataset.auto = 'false';
+});
+            
+          
+            
+            document.getElementById('restockInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addRestockItem();
+            });
+            document.getElementById('viewDate').addEventListener('change', function() {
+                currentViewDate = this.value;
+                render();
+            });
+        
+
+            
+            window.onerror = function(message, source, lineno, colno, error) {
+                console.error('Глобальная ошибка:', { message, source, line: lineno, column: colno, error });
+                showToast('❌ Произошла ошибка. Данные сохранены.', 'error');
+                try { saveDataLocal(); } catch (e) { }
+                return false;
+            };
+        });
+    </script>
+
+<!-- Скрытый input для загрузки JSON -->
+<input type="file" id="backupFileInput" accept=".json" onchange="importAllData(event)" style="display: none;">
+
+    <!-- PWA: регистрация service worker + обновление -->
+    <script>
+    (function() {
+        if (!('serviceWorker' in navigator)) {
+            console.log('[PWA] Service Worker не поддерживается');
+            return;
+        }
+
+        let newWorker = null;
+        let refreshing = false;
+
+        // Регистрация SW
+        navigator.serviceWorker.register('./service-worker.js')
+            .then(reg => {
+                console.log('[PWA] SW зарегистрирован:', reg.scope);
+
+                // Проверка обновлений раз в час
+                setInterval(() => reg.update(), 60 * 60 * 1000);
+
+                // Отслеживаем появление нового SW
+                reg.addEventListener('updatefound', () => {
+                    newWorker = reg.installing;
+                    if (!newWorker) return;
+
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Новая версия готова, старая ещё работает
+                            showUpdateBanner();
+                        }
+                    });
+                });
+            })
+            .catch(err => {
+                console.warn('[PWA] Ошибка регистрации SW:', err);
+            });
+
+        // Перезагрузка при смене контроллера (после активации нового SW)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+        });
+
+        // Баннер «Доступно обновление»
+        function showUpdateBanner() {
+            if (document.getElementById('pwaUpdateBanner')) return;
+
+            const banner = document.createElement('div');
+            banner.id = 'pwaUpdateBanner';
+            banner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #2d3748;
+                color: white;
+                padding: 14px 20px;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                font-size: 14px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                z-index: 3000;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                max-width: calc(100vw - 40px);
+                animation: slideUp 0.3s ease;
+            `;
+            banner.innerHTML = `
+                <span>🔄 Доступно обновление</span>
+                <button id="pwaUpdateBtn" style="
+                    background: #48bb78;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 14px;
+                ">Обновить</button>
+                <button id="pwaUpdateClose" style="
+                    background: transparent;
+                    color: #a0aec0;
+                    border: none;
+                    font-size: 18px;
+                    cursor: pointer;
+                    padding: 0 4px;
+                ">✕</button>
+            `;
+
+            document.body.appendChild(banner);
+
+            document.getElementById('pwaUpdateBtn').onclick = () => {
+                if (newWorker) newWorker.postMessage('SKIP_WAITING');
+                banner.remove();
+            };
+            document.getElementById('pwaUpdateClose').onclick = () => banner.remove();
+        }
+    })();
+    </script>
+</body>
+
+</body>
+</html>
