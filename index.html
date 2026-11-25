@@ -2433,6 +2433,34 @@
     </div>
 </div>
 
+<!-- Модалка активации лицензии -->
+<div class="modal" id="licenseModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeLicenseModal()">&times;</button>
+        <h2>🔑 Активация Delo</h2>
+        <div id="licenseTrialInfo" style="background:#ebf8ff;border-left:4px solid #4299e1;padding:12px 16px;border-radius:8px;margin-bottom:15px;font-size:14px;color:#2c5282;">
+            Пробный период: <strong id="trialDaysLeft">14</strong> дн.
+        </div>
+        <div id="licenseExpiredInfo" style="display:none;background:#fff5f5;border-left:4px solid #fc8181;padding:12px 16px;border-radius:8px;margin-bottom:15px;font-size:14px;color:#742a2a;">
+            ⚠️ Пробный период истёк. Введите ключ для продолжения работы.
+        </div>
+        <div class="form-group">
+            <label>Код устройства (отправьте продавцу)</label>
+            <input type="text" id="deviceCodeInput" readonly style="background:#f7fafc;font-family:monospace;font-size:15px;letter-spacing:1px;">
+            <button type="button" class="btn-copy-item" onclick="copyDeviceCode()" style="margin-top:8px;width:100%;justify-content:center;">📋 Скопировать код</button>
+        </div>
+        <div class="form-group">
+            <label>Лицензионный ключ</label>
+            <input type="text" id="licenseKeyInput" placeholder="Вставьте ключ, полученный от продавца" style="font-family:monospace;font-size:13px;">
+        </div>
+        <div id="licenseError" style="display:none;color:#fc8181;font-size:13px;margin-top:8px;"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-modal-cancel" onclick="closeLicenseModal()">Позже</button>
+            <button type="button" class="btn-modal-save" onclick="activateLicense()">🔑 Активировать</button>
+        </div>
+    </div>
+</div>
+
 <!-- Приветственная модалка (первый запуск) -->
 <div class="modal" id="welcomeModal">
     <div class="modal-content">
@@ -2890,6 +2918,143 @@ function updateAutoSaveStatus(text) {
 const DEFAULT_SHOP_NAME = 'МАГАЗИН';
 let shopName = DEFAULT_SHOP_NAME;
 
+
+// ============================================================
+// === ЛИЦЕНЗИРОВАНИЕ (Delo) ===
+// ============================================================
+
+// Публичный ключ (из offline-license-manager)
+const LICENSE_PUBLIC_KEY = 'A_AN3siZePLRMG7D037aGw8EQRAlTDRPQ_86EBVWzsc';
+
+// Сколько дней триала
+const TRIAL_DAYS = 14;
+
+// Ключи localStorage
+const LICENSE_KEY = 'delo_license';
+const TRIAL_KEY = 'delo_trial_start';
+const DEVICE_ID_KEY = 'delo_device_id';
+
+// ============================================================
+// === ФУНКЦИИ ЛИЦЕНЗИРОВАНИЯ ===
+// ============================================================
+
+function base64urlToBytes(base64url) {
+    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+}
+
+function pemToArrayBuffer(pem) {
+    if (!pem.includes('BEGIN')) {
+        return base64urlToBytes(pem.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''));
+    }
+    const b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+}
+
+async function verifyLicenseKey(licenseKey) {
+    try {
+        const parts = licenseKey.trim().split('.');
+        if (parts.length !== 2) {
+            return { ok: false, reason: 'Неверный формат ключа' };
+        }
+        const [payloadB64, sigB64] = parts;
+
+        const key = await crypto.subtle.importKey(
+            'spki',
+            pemToArrayBuffer(LICENSE_PUBLIC_KEY),
+            { name: 'Ed25519' },
+            false,
+            ['verify']
+        );
+
+        const valid = await crypto.subtle.verify(
+            'Ed25519',
+            key,
+            base64urlToBytes(sigB64),
+            new TextEncoder().encode(payloadB64)
+        );
+
+        if (!valid) {
+            return { ok: false, reason: 'Неверная подпись ключа' };
+        }
+
+        const payloadJson = new TextDecoder().decode(base64urlToBytes(payloadB64));
+        const payload = JSON.parse(payloadJson);
+
+        if (payload.expires && new Date(payload.expires) < new Date()) {
+            return { ok: false, reason: 'Срок действия ключа истёк', payload };
+        }
+
+        return { ok: true, payload };
+    } catch (e) {
+        return { ok: false, reason: 'Ошибка проверки: ' + e.message };
+    }
+}
+
+function getDeviceId() {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        id = 'dev_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+}
+
+function getDeviceCode() {
+    const id = getDeviceId();
+    const clean = id.replace('dev_', '').toUpperCase();
+    return clean.match(/.{1,4}/g).join('-');
+}
+
+function isLicenseActive() {
+    const saved = localStorage.getItem(LICENSE_KEY);
+    if (!saved) return false;
+    try {
+        const data = JSON.parse(saved);
+        if (!data.payload) return false;
+        if (data.payload.expires && new Date(data.payload.expires) < new Date()) return false;
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function isTrialExpired() {
+    const start = localStorage.getItem(TRIAL_KEY);
+    if (!start) {
+        localStorage.setItem(TRIAL_KEY, new Date().toISOString());
+        return false;
+    }
+    const startDate = new Date(start);
+    const now = new Date();
+    const diffDays = (now - startDate) / (1000 * 60 * 60 * 24);
+    return diffDays > TRIAL_DAYS;
+}
+
+function getTrialDaysLeft() {
+    const start = localStorage.getItem(TRIAL_KEY);
+    if (!start) return TRIAL_DAYS;
+    const startDate = new Date(start);
+    const now = new Date();
+    const diffDays = (now - startDate) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(TRIAL_DAYS - diffDays));
+}
+
+function canUseApp() {
+    if (isLicenseActive()) return true;
+    if (!isTrialExpired()) return true;
+    return false;
+}
+
 function loadShopName() {
     const saved = localStorage.getItem('shopName');
     if (saved) {
@@ -2958,6 +3123,101 @@ function saveShopName() {
     updateShopNameDisplay();
     closeShopNameModal();
     showToast('✅ Название магазина сохранено');
+}
+
+// ============================================================
+// === УПРАВЛЕНИЕ ЛИЦЕНЗИЕЙ ===
+// ============================================================
+
+function showLicenseModal() {
+    document.getElementById('licenseModal').classList.add('active');
+    document.getElementById('deviceCodeInput').value = getDeviceCode();
+    document.getElementById('licenseKeyInput').value = '';
+    document.getElementById('licenseError').style.display = 'none';
+
+    // Обновляем информацию о триале
+    const trialInfo = document.getElementById('licenseTrialInfo');
+    const expiredInfo = document.getElementById('licenseExpiredInfo');
+    const daysLeft = getTrialDaysLeft();
+
+    if (isLicenseActive()) {
+        trialInfo.innerHTML = '✅ Лицензия активна';
+        expiredInfo.style.display = 'none';
+    } else if (daysLeft > 0) {
+        trialInfo.innerHTML = 'Пробный период: <strong>' + daysLeft + '</strong> дн.';
+        expiredInfo.style.display = 'none';
+    } else {
+        trialInfo.style.display = 'none';
+        expiredInfo.style.display = 'block';
+    }
+}
+
+function closeLicenseModal() {
+    document.getElementById('licenseModal').classList.remove('active');
+}
+
+function copyDeviceCode() {
+    const code = document.getElementById('deviceCodeInput').value;
+    navigator.clipboard.writeText(code).then(() => {
+        showToast('📋 Код устройства скопирован');
+    }).catch(() => {
+        showToast('❌ Не удалось скопировать', 'error');
+    });
+}
+
+async function activateLicense() {
+    const keyInput = document.getElementById('licenseKeyInput');
+    const errorEl = document.getElementById('licenseError');
+    const key = keyInput.value.trim();
+
+    if (!key) {
+        errorEl.textContent = 'Введите ключ';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    errorEl.style.display = 'none';
+
+    const result = await verifyLicenseKey(key);
+
+    if (!result.ok) {
+        errorEl.textContent = '❌ ' + result.reason;
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    // Проверяем привязку к устройству
+    const deviceId = getDeviceId();
+    if (result.payload.deviceId && result.payload.deviceId !== deviceId) {
+        errorEl.textContent = '❌ Ключ выдан для другого устройства';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    // Сохраняем лицензию
+    localStorage.setItem(LICENSE_KEY, JSON.stringify({
+        key: key,
+        payload: result.payload,
+        activatedAt: new Date().toISOString()
+    }));
+
+    showToast('✅ Лицензия активирована!');
+    closeLicenseModal();
+    updateLicenseUI();
+}
+
+// Обновление UI в зависимости от статуса лицензии
+function updateLicenseUI() {
+    const addForm = document.querySelector('.add-section');
+    const addBtn = document.querySelector('.btn-add');
+
+    if (canUseApp()) {
+        if (addForm) addForm.style.display = '';
+        if (addBtn) addBtn.disabled = false;
+    } else {
+        // Триал истёк, лицензии нет — блокируем добавление
+        if (addForm) addForm.style.display = 'none';
+    }
 }
 
 // Приветственная модалка
@@ -5083,6 +5343,13 @@ if (!saleDateInput.value || saleDateInput.dataset.auto === 'true') {
             
             loadData();
             loadShopName();
+
+                // Лицензирование: проверка при старте
+    getDeviceId();
+    if (isTrialExpired() && !isLicenseActive()) {
+        setTimeout(showLicenseModal, 800);
+    }
+    updateLicenseUI();
 
 // Восстановление автосохранения
 (async function restoreAutoSave() {
